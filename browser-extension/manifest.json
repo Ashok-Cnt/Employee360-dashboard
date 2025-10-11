@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Employee360 Tracker",
+  "version": "1.0.0",
+  "description": "Track work patterns, focus time, and productivity metrics for your dashboard",
+  
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "alarms",
+    "idle"
+  ],
+  
+  "host_permissions": [
+    "http://localhost:8001/*",
+    "http://127.0.0.1:8001/*",
+    "https://your-api-domain.com/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Productivity Tracker"
+  }
+}

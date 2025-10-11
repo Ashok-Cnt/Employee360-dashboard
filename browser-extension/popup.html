@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1976d2;
+      margin-bottom: 5px;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .status.tracking {
+      background-color: #e8f5e8;
+      border: 1px solid #4caf50;
+      color: #2e7d32;
+    }
+    
+    .status.paused {
+      background-color: #fff3e0;
+      border: 1px solid #ff9800;
+      color: #f57c00;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status.tracking .status-dot {
+      background-color: #4caf50;
+    }
+    
+    .status.paused .status-dot {
+      background-color: #ff9800;
+    }
+    
+    .stats {
+      margin-bottom: 20px;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .stat-value {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    
+    .primary-btn {
+      background-color: #1976d2;
+      color: white;
+    }
+    
+    .primary-btn:hover {
+      background-color: #1565c0;
+    }
+    
+    .secondary-btn {
+      background-color: #f5f5f5;
+      color: #666;
+    }
+    
+    .secondary-btn:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .current-activity {
+      background-color: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .activity-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    
+    .activity-url {
+      font-size: 12px;
+      color: #666;
+      word-break: break-all;
+    }
+    
+    .quick-actions {
+      border-top: 1px solid #f0f0f0;
+      padding-top: 15px;
+    }
+    
+    .quick-action {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #1976d2;
+      font-size: 14px;
+    }
+    
+    .quick-action:hover {
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Productivity Tracker</div>
+  </div>
+  
+  <div id="status" class="status tracking">
+    <div style="display: flex; align-items: center;">
+      <div class="status-dot"></div>
+      <span id="status-text">Tracking Active</span>
+    </div>
+    <button id="toggle-tracking" class="secondary-btn">Pause</button>
+  </div>
+  
+  <div class="current-activity" id="current-activity">
+    <div class="activity-title" id="activity-title">Loading...</div>
+    <div class="activity-url" id="activity-url"></div>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-item">
+      <span class="stat-label">Today's Focus Time</span>
+      <span class="stat-value" id="focus-time">0h 0m</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Sessions Today</span>
+      <span class="stat-value" id="session-count">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Productivity Score</span>
+      <span class="stat-value" id="productivity-score">--</span>
+    </div>
+  </div>
+  
+  <div class="buttons">
+    <button id="view-dashboard" class="primary-btn">View Dashboard</button>
+    <button id="sync-data" class="secondary-btn">Sync</button>
+  </div>
+  
+  <div class="quick-actions">
+    <button class="quick-action" id="start-focus-session">🎯 Start Focus Session</button>
+    <button class="quick-action" id="take-break">☕ Take Break</button>
+    <button class="quick-action" id="open-settings">⚙️ Settings</button>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
