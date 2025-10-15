@@ -16,34 +16,21 @@ import {
   Menu as MenuIcon,
   ChevronLeft,
   ChevronRight,
-  Refresh,
-  CloudSync
+  Refresh
 } from '@mui/icons-material';
-import { useDispatch } from 'react-redux';
-import { refreshUserData } from '../store/slices/userSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchSystemUser } from '../store/slices/userSlice';
 
-const Navbar = ({ onToggleSidebar, sidebarCollapsed, currentUser }) => {
+const Navbar = ({ onToggleSidebar, sidebarCollapsed }) => {
   const dispatch = useDispatch();
+  
+  // Get system user from Redux store
+  const systemUser = useSelector((state) => state.user.systemUser);
 
   const handleRefreshUser = () => {
-    dispatch(refreshUserData());
+    dispatch(fetchSystemUser());
   };
 
-  const handleADSync = async () => {
-    if (currentUser && currentUser.email) {
-      try {
-        const response = await fetch(`http://127.0.0.1:8001/api/ad/refresh-user/${currentUser.id}`, {
-          method: 'POST'
-        });
-        if (response.ok) {
-          // Refresh user data after AD sync
-          dispatch(refreshUserData());
-        }
-      } catch (error) {
-        console.error('AD sync failed:', error);
-      }
-    }
-  };
   return (
     <AppBar 
       position="fixed" 
@@ -68,12 +55,12 @@ const Navbar = ({ onToggleSidebar, sidebarCollapsed, currentUser }) => {
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {currentUser && (
+          {systemUser && (
             <Chip
               avatar={<Avatar sx={{ bgcolor: 'secondary.main' }}>
-                {currentUser.full_name?.charAt(0) || currentUser.username?.charAt(0) || 'U'}
+                {systemUser.displayName?.charAt(0) || systemUser.username?.charAt(0) || 'U'}
               </Avatar>}
-              label={currentUser.full_name || currentUser.username || 'User'}
+              label={systemUser.displayName || systemUser.username || 'System User'}
               variant="outlined"
               sx={{ 
                 color: 'white', 
@@ -85,15 +72,9 @@ const Navbar = ({ onToggleSidebar, sidebarCollapsed, currentUser }) => {
             />
           )}
           
-          <Tooltip title="Refresh user data">
+          <Tooltip title="Refresh system user">
             <IconButton color="inherit" onClick={handleRefreshUser}>
               <Refresh />
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title="Sync from Active Directory">
-            <IconButton color="inherit" onClick={handleADSync}>
-              <CloudSync />
             </IconButton>
           </Tooltip>
           

@@ -17,26 +17,25 @@ from app.database import get_collection
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-@router.get("/current", response_model=Optional[ApplicationSnapshot])
+@router.get("/current")
 async def get_current_applications():
-    """Get the most recent application snapshot"""
+    """Get currently active applications"""
     try:
         collection = get_collection("application_activity")
         
-        # Get the most recent snapshot
-        snapshot = await collection.find_one(
-            {},
+        # Get all currently active applications
+        cursor = collection.find(
+            {"is_active": True},
             sort=[("timestamp", -1)]
         )
         
-        if not snapshot:
-            return None
+        applications = []
+        async for app in cursor:
+            if "_id" in app:
+                app["_id"] = str(app["_id"])
+            applications.append(app)
         
-        # Convert ObjectId to string for JSON serialization
-        if "_id" in snapshot:
-            snapshot["_id"] = str(snapshot["_id"])
-        
-        return ApplicationSnapshot(**snapshot)
+        return applications
         
     except Exception as e:
         logger.error(f"Error getting current applications: {e}")
@@ -151,7 +150,7 @@ async def get_application_summary(
             detail=f"Failed to get application summary: {str(e)}"
         )
 
-@router.get("/stats", response_model=ActivityStats)
+@router.get("/stats")
 async def get_activity_stats(
     hours: int = Query(default=24, description="Number of hours to analyze")
 ):
@@ -162,18 +161,19 @@ async def get_activity_stats(
         # Calculate cutoff time
         cutoff_time = datetime.utcnow() - timedelta(hours=hours)
         
-        # Get basic stats
-        total_snapshots = await collection.count_documents({"timestamp": {"$gte": cutoff_time}})
+        # Get basic stats for individual applications
+        total_docs = await collection.count_documents({"timestamp": {"$gte": cutoff_time}})
         
-        if total_snapshots == 0:
-            return ActivityStats(
-                total_snapshots=0,
-                unique_applications=0,
-                most_used_app="None",
-                total_monitoring_time_hours=0.0,
-                average_applications_running=0.0,
-                peak_memory_usage_gb=0.0
-            )
+        if total_docs == 0:
+            return {
+                "total_sessions": 0,
+                "unique_applications": 0,
+                "most_used_app": "None",
+                "total_monitoring_time_hours": 0.0,
+                "average_applications_running": 0.0,
+                "peak_memory_usage_gb": 0.0,
+                "currently_active_apps": 0
+            }
         
         # Aggregation for detailed stats
         pipeline = [
@@ -181,22 +181,22 @@ async def get_activity_stats(
             {
                 "$facet": {
                     "unique_apps": [
-                        {"$unwind": "$applications"},
-                        {"$group": {"_id": "$applications.name"}},
+                        {"$group": {"_id": "$application"}},
                         {"$count": "count"}
                     ],
                     "most_used": [
-                        {"$unwind": "$applications"},
-                        {"$group": {"_id": "$applications.name", "count": {"$sum": 1}}},
+                        {"$group": {"_id": "$application", "count": {"$sum": 1}}},
                         {"$sort": {"count": -1}},
                         {"$limit": 1}
                     ],
-                    "avg_apps": [
-                        {"$group": {"_id": None, "avg_count": {"$avg": "$total_applications"}}}
+                    "avg_memory": [
+                        {"$group": {"_id": None, "avg_memory": {"$avg": "$memory_usage_mb"}}}
                     ],
                     "peak_memory": [
-                        {"$unwind": "$applications"},
-                        {"$group": {"_id": None, "max_memory": {"$max": "$applications.memory_usage_mb"}}}
+                        {"$group": {"_id": None, "max_memory": {"$max": "$memory_usage_mb"}}}
+                    ],
+                    "avg_cpu": [
+                        {"$group": {"_id": None, "avg_cpu": {"$avg": "$cpu_usage_percent"}}}
                     ]
                 }
             }
@@ -209,17 +209,27 @@ async def get_activity_stats(
         unique_apps = stats_data.get("unique_apps", [{}])[0].get("count", 0)
         most_used = stats_data.get("most_used", [{}])
         most_used_app = most_used[0].get("_id", "None") if most_used else "None"
-        avg_apps = stats_data.get("avg_apps", [{}])[0].get("avg_count", 0.0)
+        avg_memory = stats_data.get("avg_memory", [{}])[0].get("avg_memory", 0.0)
         peak_memory = stats_data.get("peak_memory", [{}])[0].get("max_memory", 0.0)
+        avg_cpu = stats_data.get("avg_cpu", [{}])[0].get("avg_cpu", 0.0)
         
-        return ActivityStats(
-            total_snapshots=total_snapshots,
-            unique_applications=unique_apps,
-            most_used_app=most_used_app,
-            total_monitoring_time_hours=round(total_snapshots / 60.0, 2),  # Convert minutes to hours
-            average_applications_running=round(avg_apps, 1),
-            peak_memory_usage_gb=round(peak_memory / 1024.0, 2)  # Convert MB to GB
-        )
+        # Get currently active applications count
+        currently_active = await collection.count_documents({"is_active": True})
+        
+        # Calculate monitoring time based on document count (each doc represents ~30 seconds)
+        monitoring_hours = round((total_docs * 0.5) / 60.0, 2)  # 30 seconds per doc converted to hours
+        
+        return {
+            "total_sessions": total_docs,
+            "unique_applications": unique_apps,
+            "most_used_app": most_used_app,
+            "total_monitoring_time_hours": monitoring_hours,
+            "average_applications_running": round(total_docs / max(1, monitoring_hours * 2), 1),  # Estimate based on docs per hour
+            "peak_memory_usage_gb": round(peak_memory / 1024.0, 2),  # Convert MB to GB
+            "currently_active_apps": currently_active,
+            "avg_memory_mb": round(avg_memory, 2),
+            "avg_cpu_percent": round(avg_cpu, 2)
+        }
         
     except Exception as e:
         logger.error(f"Error getting activity stats: {e}")
@@ -234,16 +244,20 @@ async def get_current_focused_window():
     try:
         collection = get_collection("application_activity")
         
-        # Get the most recent snapshot with focused window data
-        snapshot = await collection.find_one(
-            {"focused_window": {"$exists": True, "$ne": None}},
+        # Get the most recent focused application
+        focused_app = await collection.find_one(
+            {"is_focused": True, "is_active": True},
             sort=[("timestamp", -1)]
         )
         
-        if not snapshot or not snapshot.get("focused_window"):
+        if not focused_app:
             return {"message": "No focused window data available"}
         
-        return snapshot["focused_window"]
+        # Convert ObjectId to string for JSON serialization
+        if "_id" in focused_app:
+            focused_app["_id"] = str(focused_app["_id"])
+            
+        return focused_app
         
     except Exception as e:
         logger.error(f"Error getting focused window: {e}")

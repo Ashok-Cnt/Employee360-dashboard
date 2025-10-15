@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import work_patterns, learning, health, insights, users, active_directory, application_activity
+from app.routers import work_patterns, learning, health, insights, users, application_activity
 
 # Load environment variables
 load_dotenv()
@@ -35,7 +35,6 @@ async def shutdown_db_client():
 
 # Include routers
 app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(active_directory.router, prefix="/api/ad", tags=["active-directory"])
 app.include_router(application_activity.router, prefix="/api/apps", tags=["application-activity"])
 app.include_router(work_patterns.router, prefix="/api/work-patterns", tags=["work-patterns"])
 app.include_router(learning.router, prefix="/api/learning", tags=["learning"])
