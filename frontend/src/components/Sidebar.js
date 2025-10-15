@@ -15,7 +15,6 @@ import {
   School,
   FitnessCenter,
   Psychology,
-  CloudSync,
   Computer,
 } from '@mui/icons-material';
 
@@ -29,7 +28,6 @@ const menuItems = [
   { text: 'Health Metrics', icon: <FitnessCenter />, path: '/health' },
   { text: 'AI Insights', icon: <Psychology />, path: '/insights' },
   { text: 'Application Activity', icon: <Computer />, path: '/application-activity' },
-  { text: 'Active Directory', icon: <CloudSync />, path: '/active-directory' },
 ];
 
 const Sidebar = ({ collapsed = false }) => {

@@ -11,7 +11,7 @@ import random
 from bson import ObjectId
 
 # MongoDB connection string
-MONGODB_URL = "mongodb+srv://employee360:admin@employee360.n05xtqd.mongodb.net/"
+MONGODB_URL = "mongodb://localhost:27017"
 DATABASE_NAME = "employee360"
 
 async def create_collections(db):
@@ -217,7 +217,7 @@ async def main():
     try:
         # Test connection
         await client.admin.command('ping')
-        print("✅ Connected to MongoDB Atlas!")
+        print("✅ Connected to local MongoDB!")
         
         # Setup database
         await create_collections(db)

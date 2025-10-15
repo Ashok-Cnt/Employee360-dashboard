@@ -1,5 +1,64 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
+// Get Windows system user information
+export const fetchSystemUser = createAsyncThunk(
+  'user/fetchSystemUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      // Try Express backend first, then Python backend as fallback
+      let response;
+      try {
+        response = await fetch('http://127.0.0.1:8001/api/users/system-user', {
+          timeout: 5000 // 5 second timeout
+        });
+      } catch (expressError) {
+        console.log('Express backend not available, trying Python backend...');
+        response = await fetch('http://127.0.0.1:8000/api/users/system-user', {
+          timeout: 5000 // 5 second timeout
+        });
+      }
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch system user');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.systemUser) {
+        return {
+          username: data.systemUser.username,
+          displayName: data.systemUser.displayName || data.systemUser.username,
+          platform: data.systemUser.platform,
+          hostname: data.systemUser.hostname,
+          isSystemUser: true
+        };
+      } else if (data.success && data.system_user) {
+        // Python backend format
+        return {
+          username: data.system_user.username,
+          displayName: data.system_user.display_name || data.system_user.username,
+          platform: data.system_user.platform,
+          hostname: data.system_user.hostname,
+          isSystemUser: true
+        };
+      } else {
+        throw new Error('Invalid system user response');
+      }
+    } catch (error) {
+      console.error('Failed to fetch system user:', error);
+      // Return a fallback system user instead of rejecting
+      return {
+        username: 'User',
+        displayName: 'User',
+        platform: 'windows',
+        hostname: 'localhost',
+        isSystemUser: true,
+        isFallback: true
+      };
+    }
+  }
+);
+
 // Auto-login by fetching first user from the database
 export const autoLogin = createAsyncThunk(
   'user/autoLogin',
@@ -152,7 +211,9 @@ const userSlice = createSlice({
   name: 'user',
   initialState: {
     currentUser: null,
+    systemUser: null, // Windows system login user
     loading: false,
+    systemUserLoading: false, // Separate loading state for system user
     error: null,
     isAuthenticated: false,
   },
@@ -179,6 +240,28 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch system user
+      .addCase(fetchSystemUser.pending, (state) => {
+        state.systemUserLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchSystemUser.fulfilled, (state, action) => {
+        state.systemUserLoading = false;
+        state.systemUser = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchSystemUser.rejected, (state, action) => {
+        state.systemUserLoading = false;
+        // Don't set error for system user failure, use fallback
+        state.systemUser = {
+          username: 'User',
+          displayName: 'User',
+          platform: 'windows',
+          hostname: 'localhost',
+          isSystemUser: true,
+          isFallback: true
+        };
+      })
       // Auto-login
       .addCase(autoLogin.pending, (state) => {
         state.loading = true;

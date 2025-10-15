@@ -4,6 +4,7 @@ import learningReducer from './slices/learningSlice';
 import healthReducer from './slices/healthSlice';
 import insightsReducer from './slices/insightsSlice';
 import userReducer from './slices/userSlice';
+import applicationActivityReducer from './slices/applicationActivitySlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,5 +13,6 @@ export const store = configureStore({
     learning: learningReducer,
     health: healthReducer,
     insights: insightsReducer,
+    applicationActivity: applicationActivityReducer,
   },
 });

@@ -1,16 +1,18 @@
-# Quick Start Guide
+# Quick Start Guide - Express.js Architecture
 
-Get your Employee360 up and running in minutes!
+Get your Employee360 up and running in minutes with the new Express.js + Python architecture!
 
 ## Prerequisites
 
 Before you begin, ensure you have:
-- **Node.js** (v16+) - [Download here](https://nodejs.org/)
+- **Node.js** (v18+) - [Download here](https://nodejs.org/)
 - **Python** (3.8+) - [Download here](https://python.org/)
 - **MongoDB** - [Local install](https://mongodb.com/try/download/community) or [MongoDB Atlas](https://mongodb.com/cloud/atlas)
 - **Git** - [Download here](https://git-scm.com/)
 
 ## 🚀 Quick Setup (5 minutes)
+
+**⭐ REMINDER: After setup, use the .bat files to start all services easily!**
 
 ### 1. Clone and Setup Project
 ```bash
@@ -22,29 +24,41 @@ cd Employee360-dashboard
 cd Employee360-dashboard
 ```
 
-### 2. Setup Backend (2 minutes)
+### 2. Setup Express.js Backend (2 minutes)
 ```bash
-# Navigate to backend
-cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
+# Navigate to Express backend
+cd backend-express
 
 # Install dependencies
-pip install -r requirements.txt
+npm install
 
 # Setup environment
-cp .env.example .env
-# Edit .env file with your settings (MongoDB URL, etc.)
+# .env file should contain:
+# PORT=8001
+# MONGODB_URI=mongodb://localhost:27017
+# DATABASE_NAME=employee360
+# ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+# NODE_ENV=development
 ```
 
-### 3. Setup Frontend (2 minutes)
+### 3. Setup Python Data Collector (2 minutes)
+```bash
+# Navigate to data collector (in a new terminal)
+cd data-collector
+
+# Install Python dependencies
+pip install motor pymongo psutil python-dotenv schedule requests
+
+# Setup environment
+# .env file should contain:
+# MONGODB_URI=mongodb://localhost:27017
+# DATABASE_NAME=employee360
+# COLLECTION_INTERVAL_SECONDS=30
+# USER_ID=john_doe
+# LOG_LEVEL=INFO
+```
+
+### 4. Setup Frontend (2 minutes)
 ```bash
 # Navigate to frontend (in a new terminal)
 cd frontend
@@ -53,95 +67,116 @@ cd frontend
 npm install
 ```
 
-### 4. Setup Database (1 minute)
+### 5. Setup Database (1 minute)
 ```bash
 # Start MongoDB (if using local installation)
 mongod
 
-# Initialize database (in a new terminal)
-mongosh
-# Copy and paste the contents of database/init_db.js
-# Or: mongosh < database/init_db.js
-
-# Optional: Add sample data
-# Copy and paste the contents of database/sample_data.js
+# Optional: Initialize with sample data
+cd Employee360-dashboard
+python add_realistic_app_data.py
 ```
 
-### 5. Start the Application
-```bash
-# Terminal 1: Start Backend
-cd backend
-python main.py
-# Backend runs on http://localhost:8000
+### 6. Start the Application (3 Services) - Use Batch Files! 🚀
 
-# Terminal 2: Start Frontend
+**IMPORTANT: Use the provided batch files for easy startup:**
+
+```bash
+# Method 1: Use Batch Files (RECOMMENDED)
+# Simply double-click or run these batch files:
+start-express-backend.bat     # Starts Express.js Backend on port 8001
+start-data-collector.bat      # Starts Python Data Collector
+start-frontend.bat           # Starts React Frontend on port 3000
+```
+
+**Alternative Manual Method:**
+```bash
+# Terminal 1: Start Express.js Backend
+cd backend-express
+npm start
+# Backend API runs on http://127.0.0.1:8001
+
+# Terminal 2: Start Python Data Collector
+cd data-collector
+python collector.py
+# Data collector runs in background, collecting real app activity
+
+# Terminal 3: Start React Frontend
 cd frontend
 npm start
 # Frontend runs on http://localhost:3000
 ```
 
-### 6. Install Browser Extension
-1. Open Chrome/Edge
-2. Go to `chrome://extensions/` (or `edge://extensions/`)
-3. Enable "Developer mode"
-4. Click "Load unpacked"
-5. Select the `browser-extension` folder
+**💡 Pro Tip: The batch files handle all the directory navigation and commands automatically!**
 
-## 🎯 First Steps
+## 🎯 Architecture Overview
 
-### 1. Create Account
-- Visit http://localhost:3000
-- Click "Register" to create your account
-- Or use sample credentials: `demo@example.com` / `demo123`
+### New Express.js + Python Architecture
+- **Express.js Backend** (Port 8001): Fast API reads and database queries
+- **Python Data Collector**: Background service for real-time application monitoring
+- **React Frontend** (Port 3000): User interface with proxy to Express API
+- **MongoDB**: Centralized data storage for all services
 
-### 2. Configure Extension
-- Click the extension icon in your browser
-- Go to Settings
-- Enter API endpoint: `http://localhost:8000/api`
-- Login with your credentials
-
-### 3. Start Tracking
-- The extension automatically starts tracking
-- Visit different websites to see data populate
-- Use the dashboard to view your productivity metrics
+### API Endpoints (Express.js)
+- `GET /health` - Health check
+- `GET /api/apps/current` - Current running applications
+- `GET /api/apps/summary?period={today|week|month}` - Usage summary
+- `GET /api/apps/stats` - Application statistics
+- `GET /api/apps/top-memory-usage?limit=10` - Top memory consumers
+- `GET /api/apps/focused-window` - Currently focused application
+- `GET /api/apps/timeline?hours=24` - Application activity timeline
 
 ## 📊 What You'll See
 
-### Dashboard Overview
-- **Focus Hours**: Time spent on productive activities
-- **Productivity Score**: Overall productivity percentage
-- **Learning Progress**: Courses and skills tracking
-- **Health Metrics**: Sleep, activity, and wellness data
+### Dashboard Features
+- **Current Applications**: Real-time view of running applications
+- **Usage Summary**: Daily, weekly, and monthly application usage
+- **Memory Usage**: Top memory-consuming applications
+- **Productivity Metrics**: Focus time and activity patterns
+- **Application Statistics**: Comprehensive usage analytics
 
-### Real-time Tracking
-- Browser extension tracks your activity automatically
-- Categorizes websites and applications
-- Syncs data every 5 minutes
+### Real-time Data Collection
+- Python collector tracks actual Windows applications
+- Monitors focused windows using Windows APIs
+- Records memory and CPU usage per application
+- Automatic data cleanup (keeps 30 days)
 
 ## 🔧 Configuration Options
 
-### Backend Configuration (.env)
+### Express.js Backend Configuration (.env)
 ```bash
-# Database
-MONGODB_URL=mongodb://localhost:27017
+# Server Configuration
+PORT=8001
+NODE_ENV=development
+
+# MongoDB Configuration
+MONGODB_URI=mongodb://localhost:27017
 DATABASE_NAME=employee360
 
-# API Settings
-API_HOST=0.0.0.0
-API_PORT=8000
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
 
-# Security (change these!)
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
+### Python Data Collector Configuration (.env)
+```bash
+# MongoDB Configuration
+MONGODB_URI=mongodb://localhost:27017
+DATABASE_NAME=employee360
 
-# Optional: AI Integration
-OPENAI_API_KEY=your-openai-key
+# Data Collection Configuration
+COLLECTION_INTERVAL_SECONDS=30
+USER_ID=john_doe
+
+# Logging Configuration
+LOG_LEVEL=INFO
 ```
 
 ### Frontend Configuration
 ```bash
-# Create frontend/.env
-REACT_APP_API_URL=http://localhost:8000/api
+# Proxy is configured in package.json
+"proxy": "http://localhost:8001"
+
+# Create frontend/.env for custom settings
 REACT_APP_ENV=development
 ```
 
@@ -149,149 +184,222 @@ REACT_APP_ENV=development
 
 Want to see the dashboard in action immediately?
 
-1. Use the sample data from `database/sample_data.js`
-2. Login with demo credentials: `demo@example.com`
-3. Explore all features with pre-populated data
+1. Start all three services (Express, Python collector, React)
+2. Let the Python collector run for a few minutes to gather real data
+3. Navigate to Application Activity page to see live monitoring
+4. The system tracks actual Windows applications in real-time
 
-## 📱 Mobile Access
+## 🔧 Batch Files for Easy Startup ⭐ RECOMMENDED
 
-The dashboard is responsive and works on mobile devices:
-- Visit http://localhost:3000 on your phone
-- All charts and metrics are mobile-optimized
-- Touch-friendly interface
+**Use these batch files for quick and easy startup:**
 
-## 🔒 Privacy & Security
+```bash
+# RECOMMENDED: Use these batch files instead of manual commands
+start-express-backend.bat    # Starts Express.js backend (port 8001)
+start-data-collector.bat     # Starts Python data collector 
+start-frontend.bat           # Starts React frontend (port 3000)
+```
 
-### Data Collection
-- Only tracks URL hostnames (not full URLs)
-- No sensitive content is recorded
-- Data stays on your device until synced
+**How to use:**
+1. **Double-click** each .bat file in Windows Explorer, OR
+2. **Run from command prompt:** `start-express-backend.bat`
+3. **Each service starts in its own terminal window**
 
-### Security Features
-- JWT authentication
-- Password hashing with bcrypt
-- CORS protection
-- Input validation
+**Benefits of using batch files:**
+- ✅ No need to navigate directories manually
+- ✅ Automatic error handling and setup
+- ✅ Consistent startup process every time
+- ✅ Each service runs in its own terminal window
+
+## � Data Collection Features
+
+### Real-time Monitoring
+- Tracks currently focused Windows applications
+- Records memory and CPU usage per application
+- Monitors window titles and application activity
+- Uses Windows APIs for accurate window detection
+
+### Data Storage
+- All data stored in MongoDB
+- Automatic cleanup of old data (30+ days)
+- Structured collections for efficient querying
+- Real-time aggregation for dashboard metrics
+
+### Privacy & Security
+- Only tracks application names and window titles
+- No content or sensitive data is recorded
+- Data stays on your local system
+- Configurable collection intervals
 
 ## 🐛 Troubleshooting
 
-### Backend Won't Start
+### Express Backend Won't Start
+```bash
+# Check Node.js version
+node --version
+
+# Reinstall dependencies
+cd backend-express
+npm install
+
+# Check if port 8001 is available
+netstat -an | findstr ":8001"
+```
+
+### Python Data Collector Issues
 ```bash
 # Check Python version
 python --version
 
-# Reinstall dependencies
-pip install -r requirements.txt
+# Install missing dependencies
+pip install motor pymongo psutil python-dotenv schedule requests
 
 # Check MongoDB connection
-mongosh --eval "db.runCommand('ping')"
+python -c "import pymongo; print(pymongo.MongoClient('mongodb://localhost:27017').admin.command('ping'))"
 ```
 
 ### Frontend Won't Start
 ```bash
 # Clear node modules
+cd frontend
 rm -rf node_modules package-lock.json
 npm install
 
 # Check Node version
 node --version
+
+# Verify proxy configuration in package.json
 ```
 
-### Extension Not Working
-1. Check if extension is enabled
-2. Reload extension in Chrome/Edge
-3. Check console for errors (F12)
-4. Verify API endpoint in extension settings
-
-### Database Issues
+### MongoDB Connection Issues
 ```bash
 # Check MongoDB status
-mongosh --eval "db.stats()"
+mongosh --eval "db.runCommand('ping')"
 
-# Reset database
-mongosh employee360 --eval "db.dropDatabase()"
-# Then run init_db.js again
+# Start MongoDB service
+net start MongoDB
+
+# Check MongoDB logs
+# Windows: C:\Program Files\MongoDB\Server\7.0\log\mongod.log
 ```
 
 ## 🚀 Production Deployment
 
-### Quick Deploy Options
-
-**Frontend (Netlify)**
+### Express.js Backend
 ```bash
+# Build for production
+cd backend-express
+npm install --production
+
+# Use PM2 for process management
+npm install -g pm2
+pm2 start server.js --name employee360-api
+```
+
+### Python Data Collector
+```bash
+# Run as Windows service or use task scheduler
+cd data-collector
+python collector.py
+
+# Or use nssm to create Windows service
+nssm install Employee360Collector python collector.py
+```
+
+### React Frontend
+```bash
+# Build for production
+cd frontend
 npm run build
-# Upload build/ folder to Netlify
+
+# Deploy to static hosting (Netlify, Vercel, etc.)
+# Or serve with nginx/Apache
 ```
 
-**Backend (Heroku)**
-```bash
-# Install Heroku CLI
-heroku create your-app-name
-git push heroku main
-```
-
-**Database (MongoDB Atlas)**
+### Database (MongoDB Atlas)
 - Create free cluster at mongodb.com
-- Update MONGODB_URL in .env
-- Import your data
+- Update MONGODB_URI in all .env files
+- Configure network access and authentication
 
 ## 📈 Next Steps
 
 ### Enhance Your Setup
-1. **Add Integrations**: Connect calendar, Slack, GitHub
-2. **Customize Categories**: Edit website categorization
-3. **Set Goals**: Define productivity targets
-4. **Export Data**: Backup your productivity data
+1. **Customize Data Collection**: Adjust collection intervals and monitored applications
+2. **Add More Metrics**: Extend Python collector to track additional system metrics
+3. **Create Reports**: Build custom analytics and reporting features
+4. **Integration**: Connect with other productivity tools and APIs
 
 ### Advanced Features
-1. **AI Insights**: Add OpenAI key for intelligent recommendations
-2. **Team Dashboard**: Share insights with your team
-3. **Mobile App**: Build React Native companion app
-4. **Wearable Integration**: Connect fitness trackers
+1. **AI Insights**: Add intelligent recommendations based on usage patterns
+2. **Team Dashboard**: Share productivity insights across teams
+3. **Mobile Companion**: Build React Native mobile app
+4. **Real-time Alerts**: Set up notifications for productivity goals
 
 ## 💡 Tips for Best Results
 
-### Productivity Tracking
-- Let the extension run for a week to establish patterns
-- Review weekly reports for insights
-- Adjust categories to match your workflow
-- Set realistic productivity goals
+### Data Collection Optimization
+- Let the Python collector run continuously for best results
+- Review application categorization and adjust as needed
+- Monitor system resources to ensure smooth operation
+- Regular database maintenance for optimal performance
 
-### Data Quality
-- Regularly sync your data
-- Keep extension updated
-- Review and clean categorizations
-- Backup your data periodically
+### Dashboard Usage
+- Use different time ranges to identify patterns
+- Focus on memory usage trends to optimize system performance
+- Track focused window patterns to understand work habits
+- Export data for deeper analysis if needed
 
 ## 🤝 Getting Help
 
 ### Documentation
+- [Express Backend Guide](backend-express/README.md)
+- [Data Collector Guide](data-collector/README.md)
 - [Frontend Guide](frontend/README.md)
-- [Backend API Docs](backend/README.md)
-- [Extension Guide](browser-extension/README.md)
-- [Database Schema](database/README.md)
+- [Migration Success Notes](EXPRESS_MIGRATION_SUCCESS.md)
 
 ### Community
-- GitHub Issues for bugs
-- Discussions for questions
-- Feature requests welcome
+- GitHub Issues for bugs and feature requests
+- Discussions for questions and improvements
+- Pull requests welcome for enhancements
 
 ### Support
-- Check logs for error details
-- Include system info in bug reports
-- Test with sample data first
+- Check logs in each service for error details
+- Include system info and steps to reproduce in bug reports
+- Test with fresh data if experiencing issues
 
 ## 🌟 Success Metrics
 
 After setup, you should see:
-- ✅ Dashboard loads with your data
-- ✅ Extension tracks browser activity
-- ✅ Charts show productivity trends
-- ✅ API responses are fast (<200ms)
-- ✅ Data syncs automatically
+- ✅ Express API responding at http://127.0.0.1:8001/health
+- ✅ Python collector gathering real application data
+- ✅ React dashboard displaying live activity at http://localhost:3000
+- ✅ MongoDB collections populated with activity data
+- ✅ Real-time updates every 30 seconds (configurable)
 
 ## 🎉 You're Ready!
 
-Your Employee360 is now running! Start browsing and working normally - the system will automatically track your patterns and provide insights to help you optimize your productivity.
+Your Employee360 with Express.js architecture is now running! The system will automatically:
 
-Visit http://localhost:3000 to explore your personalized productivity analytics!
+- **Track** your actual Windows application usage
+- **Monitor** memory and CPU consumption
+- **Record** focused window activity
+- **Display** real-time productivity metrics
+
+Visit http://localhost:3000 and navigate to "Application Activity" to see your live productivity analytics!
+
+### Test Your Setup
+
+**🚀 Quick Start Method (RECOMMENDED):**
+1. **Run batch files**: Double-click `start-express-backend.bat`, `start-data-collector.bat`, and `start-frontend.bat`
+2. **API Test**: Visit http://127.0.0.1:8001/health
+3. **Current Apps**: Check http://127.0.0.1:8001/api/apps/current
+4. **Dashboard**: Open http://localhost:3000
+5. **Live Data**: Switch between applications and see real-time updates
+
+**Manual Verification:**
+1. **API Test**: Visit http://127.0.0.1:8001/health
+2. **Current Apps**: Check http://127.0.0.1:8001/api/apps/current
+3. **Dashboard**: Open http://localhost:3000
+4. **Live Data**: Switch between applications and see real-time updates
+
+The new architecture provides better performance, cleaner separation of concerns, and more robust real-time data collection! 🚀

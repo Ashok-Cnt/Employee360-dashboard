@@ -5,8 +5,35 @@ from app.models.user import User, UserCreate, UserUpdate
 from app.database import get_collection
 from app.auth import get_password_hash, verify_password
 import logging
+import getpass
+import os
+import platform
 
 router = APIRouter()
+
+@router.get("/system-user")
+async def get_system_user():
+    """Get current Windows system user information"""
+    try:
+        # Get system username (Windows login user)
+        system_username = getpass.getuser()
+        
+        return {
+            "success": True,
+            "system_user": {
+                "username": system_username,
+                "display_name": system_username,
+                "platform": platform.system(),
+                "hostname": platform.node(),
+                "timestamp": datetime.utcnow()
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting system user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get system user information"
+        )
 
 @router.post("/register", response_model=dict)
 async def register_user(user_data: UserCreate):
