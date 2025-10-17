@@ -16,6 +16,7 @@ import {
   FitnessCenter,
   Psychology,
   Computer,
+  NotificationsActive,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -28,6 +29,7 @@ const menuItems = [
   { text: 'Health Metrics', icon: <FitnessCenter />, path: '/health' },
   { text: 'AI Insights', icon: <Psychology />, path: '/insights' },
   { text: 'Application Activity', icon: <Computer />, path: '/application-activity' },
+  { text: 'Alert Rules', icon: <NotificationsActive />, path: '/alert-rules' },
 ];
 
 const Sidebar = ({ collapsed = false }) => {

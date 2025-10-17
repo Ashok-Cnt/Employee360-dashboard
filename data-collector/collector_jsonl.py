@@ -14,6 +14,9 @@ import configparser
 import getpass
 from collections import defaultdict
 
+# Import alert engine
+from alert_engine import get_alert_engine
+
 # Load environment variables
 load_dotenv()
 
@@ -28,9 +31,13 @@ logger = logging.getLogger(__name__)
 APP_CATEGORIES = {
     'Productive': [
         'Visual Studio Code', 'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint',
-        'JetBrains Rider', 'IntelliJ IDEA', 'PyCharm', 'WebStorm', 'Adobe Photoshop',
+        'JetBrains Rider', 'IntelliJ IDEA', 'Idea64', 'PyCharm', 'WebStorm', 'Adobe Photoshop',
         'Adobe Illustrator', 'MongoDB Compass', 'Postman', 'Sublime Text', 'Notepad++',
-        'Visual Studio', 'Eclipse', 'NetBeans', 'Android Studio'
+        'Visual Studio', 'Eclipse', 'NetBeans', 'Android Studio', 'SQL Developer', 'Sqldeveloper64w',
+        'Oracle SQL Developer', 'DBeaver', 'DataGrip', 'Bruno', 'Insomnia',
+        'Microsoft OneNote', 'Evernote', 'Notion', 'Obsidian',
+        'Git', 'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
+        'WinSCP', 'PuTTY', 'mPuTTY', 'KiTTY', 'MobaXterm', 'SecureCRT'
     ],
     'Communication': [
         'Microsoft Teams', 'Slack', 'Discord', 'Zoom', 'Skype', 'WhatsApp',
@@ -73,7 +80,9 @@ class ActivityTracker:
             'total_focus_seconds': 0,
             'hourly_stats': defaultdict(lambda: {'focus_seconds': 0, 'run_seconds': 0}),
             'last_seen': None,
-            'is_focused': False
+            'is_focused': False,
+            'window_titles': [],
+            'focus_switches': []  # List of {'from': datetime, 'to': datetime, 'window_title': str}
         })
         
         self.hourly_summary = defaultdict(lambda: {
@@ -98,6 +107,14 @@ class ActivityTracker:
         # Idle detection
         self.last_activity_time = time.time()
         self.idle_threshold = 300  # 5 minutes
+        
+        # Focus switch tracking
+        self.last_focused_app = None
+        self.last_focus_start_time = None
+        self.last_window_title = None
+        
+        # Alert engine
+        self.alert_engine = get_alert_engine()
         
         # Load configuration
         self.config = configparser.ConfigParser()
@@ -423,6 +440,28 @@ class ActivityTracker:
         
         # Get foreground window
         foreground_process, window_title = self.get_foreground_window_info()
+        # Track full window title and contact switch
+        now = current_time
+        if foreground_process:
+            # If focus changed, record switch event
+            if self.last_focused_app != foreground_process:
+                if self.last_focused_app and self.last_focus_start_time:
+                    # Save switch event for previous app
+                    self.app_tracking[self.last_focused_app]['focus_switches'].append({
+                        'from': self.last_focus_start_time.isoformat(),
+                        'to': now.isoformat(),
+                        'window_title': self.last_window_title
+                    })
+                # Start new focus event
+                self.last_focused_app = foreground_process
+                self.last_focus_start_time = now
+                self.last_window_title = window_title
+            else:
+                # Update window title if changed
+                self.last_window_title = window_title
+            # Always store full window title for current app
+            if window_title:
+                self.app_tracking[foreground_process]['window_titles'].append(window_title)
         
         # Get visible windows (taskbar apps)
         visible_windows = self.get_visible_windows()
@@ -539,19 +578,21 @@ class ActivityTracker:
                     'totalRunHours': round(self.app_tracking[app_key]['total_run_seconds'] / 3600, 2),
                     'totalFocusHours': round(self.app_tracking[app_key]['total_focus_seconds'] / 3600, 2)
                 },
-                'hourlyStats': hourly_stats
+                'hourlyStats': hourly_stats,
+                'windowTitles': self.app_tracking[app_key]['window_titles'],
+                'focusSwitches': self.app_tracking[app_key]['focus_switches']
             }
             
             # Categorize as taskbar or background
-            # Uncategorized apps are always treated as background
-            if category == 'Uncategorized':
+            # Show all categorized apps in the main list
+            # Only aggregate truly unknown/uncategorized background processes
+            if category == 'Uncategorized' and not is_visible and not is_focused:
+                # Only hide if it's uncategorized AND not visible AND not focused
                 background_apps.append(app_data)
-            elif is_visible or is_focused:
-                # Visible in taskbar or currently focused
-                taskbar_apps.append(app_data)
             else:
-                # Background app - aggregate it
-                background_apps.append(app_data)
+                # Show all categorized apps (Productive, Communication, Browsers, etc.)
+                # Even if they're not currently visible in taskbar
+                taskbar_apps.append(app_data)
                 background_total_run_seconds += self.app_tracking[app_key]['total_run_seconds']
                 background_total_focus_seconds += self.app_tracking[app_key]['total_focus_seconds']
                 
@@ -657,6 +698,12 @@ class ActivityTracker:
             'apps': apps_snapshot,
             'hourlySummary': hourly_summary_data
         }
+        
+        # Check alert conditions
+        try:
+            self.alert_engine.check_alerts(self.app_tracking, snapshot)
+        except Exception as e:
+            logger.error(f"Error checking alerts: {e}")
         
         return snapshot
     

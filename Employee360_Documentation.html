@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee 360 Dashboard Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2, h3 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        ul { margin: 10px 0; }
+        .code-window {
+            background-color: #1e1e1e;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background-color: #2d2d2d;
+            color: #fff;
+            padding: 5px 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .code-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .code-content pre {
+            margin: 0;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Employee 360 Dashboard Documentation</h1>
+
+    <h2>Overview</h2>
+    <p>Employee 360 Dashboard is a comprehensive web application designed to visualize and analyze user activity and metrics. The dashboard provides insights into:</p>
+    <ul>
+        <li>Working application details (primary focus)</li>
+        <li>Learning activities</li>
+        <li>User health metrics</li>
+    </ul>
+    <p>The system collects detailed activity data at high frequency (per second or few seconds) and stores it locally in JSONL format. Periodically, aggregated data will be migrated to an Oracle SQL Server for long-term storage and advanced querying.</p>
+
+    <h2>Features</h2>
+    <ul>
+        <li>Search and filter user activity by:
+            <ul>
+                <li>Time range</li>
+                <li>Application</li>
+                <li>Project</li>
+            </ul>
+        </li>
+        <li>Visualize working patterns, application usage, and productivity metrics</li>
+        <li>Support for health and learning data integration</li>
+    </ul>
+
+    <h2>Data Flow</h2>
+    <ol>
+        <li><strong>Local Data Collection</strong>:<br>Activity data is recorded in JSONL files (e.g., <code>activity_2025-10-17_GBS05262.jsonl</code>) at high frequency to avoid continuous database writes.</li>
+        <li><strong>Aggregation & Migration</strong>:<br>Aggregated data will be periodically moved to an Oracle SQL database for efficient querying and reporting.</li>
+        <li><strong>Dashboard UI</strong>:<br>Users can search, filter, and visualize data by time, application, and project.</li>
+    </ol>
+
+    <h2>JSONL Data Format</h2>
+    <p>Each line in the JSONL file represents a snapshot of user activity, including fields such as:</p>
+    <ul>
+        <li><code>timestamp</code></li>
+        <li><code>user_id</code></li>
+        <li><code>application_name</code></li>
+        <li><code>project_name</code></li>
+        <li><code>activity_type</code></li>
+        <li><code>duration</code></li>
+        <li>Additional metrics (CPU, memory, etc.)</li>
+    </ul>
+
+    <h3>Sample JSONL Entry</h3>
+    <div class="code-window">
+        <div class="code-header">JSON</div>
+        <div class="code-content">
+            <pre><code>{
+  "timestamp": "2025-10-17T12:05:44.641052Z",
+  "system": {
+    "cpuUsage": 5.0,
+    "memoryUsageMB": 25831.0,
+    "batteryPercent": 56,
+    "isCharging": true,
+    "uptimeSec": 350539.0,
+    "idleTimeSec": 0.0,
+    "isIdle": false,
+    "aggregates": {
+      "overallMonitoringHours": 0.14,
+      "productiveHours": 0.03,
+      "communicationHours": 0.0,
+      "idleHours": 0.0,
+      "avgCPU": 6.6
+    }
+  },
+  "apps": [
+    {
+      "name": "ms-teams.exe",
+      "title": "Microsoft Teams",
+      "category": "Communication",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 692.8,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "chrome.exe",
+      "title": "Google Chrome",
+      "category": "Browsers",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 1111.6,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "msedge.exe",
+      "title": "Microsoft Edge",
+      "category": "Browsers",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 300,
+      "cpuUsage": 0,
+      "memoryUsageMB": 972.4,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.08
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 120,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 180,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [
+        "Employee360 and 2 more pages - Work - Microsoft\u200b Edge",
+        "Employee360 and 2 more pages - Work - Microsoft\u200b Edge",
+        "Employee360 and 2 more pages - Work - Microsoft\u200b Edge",
+        "Employee360 and 2 more pages - Work - Microsoft\u200b Edge",
+        "Employee360 and 2 more pages - Work - Microsoft\u200b Edge"
+      ],
+      "focusSwitches": [
+        {
+          "from": "2025-10-17T11:58:25.680417",
+          "to": "2025-10-17T12:04:34.385204",
+          "window_title": "Employee360 and 2 more pages - Work - Microsoft\u200b Edge"
+        }
+      ]
+    },
+    {
+      "name": "mtputty.exe",
+      "title": "Mtputty",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 19.9,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "Code.exe",
+      "title": "Visual Studio Code",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 3398.4,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "explorer.exe",
+      "title": "Explorer",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 1003.4,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "idea64.exe",
+      "title": "Idea64",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 3647.1,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "WebViewHost.exe",
+      "title": "Webviewhost",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 97.3,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "OUTLOOK.EXE",
+      "title": "Microsoft Outlook",
+      "category": "Communication",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 456.0,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "Notepad.exe",
+      "title": "Notepad",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 60,
+      "cpuUsage": 0,
+      "memoryUsageMB": 114.0,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.02
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 60,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [
+        "*tail -f serverdBH.out |grep 'it.sel - Notepad"
+      ],
+      "focusSwitches": [
+        {
+          "from": "2025-10-17T11:57:10.935709",
+          "to": "2025-10-17T11:58:25.680417",
+          "window_title": "*tail -f serverdBH.out |grep 'it.sel - Notepad"
+        }
+      ]
+    },
+    {
+      "name": "SystemSettings.exe",
+      "title": "Systemsettings",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 3.4,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "Bruno.exe",
+      "title": "Bruno",
+      "category": "Productive",
+      "isFocused": true,
+      "runningTimeSec": 480,
+      "focusDurationSec": 120,
+      "cpuUsage": 0,
+      "memoryUsageMB": 430.6,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.03
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 120,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [
+        "Bruno",
+        "Bruno"
+      ],
+      "focusSwitches": []
+    },
+    {
+      "name": "sqldeveloper64W.exe",
+      "title": "Sqldeveloper64w",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 97.6,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "ONENOTE.EXE",
+      "title": "Onenote",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 480,
+      "focusDurationSec": 0,
+      "cpuUsage": 0,
+      "memoryUsageMB": 265.0,
+      "aggregates": {
+        "totalRunHours": 0.13,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 0,
+          "runSeconds": 180
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 0,
+          "runSeconds": 300
+        }
+      ],
+      "windowTitles": [],
+      "focusSwitches": []
+    },
+    {
+      "name": "background_apps",
+      "title": "Other Background Apps (75 apps)",
+      "category": "Background",
+      "isFocused": false,
+      "runningTimeSec": 6720,
+      "focusDurationSec": 480,
+      "cpuUsage": 916.9,
+      "memoryUsageMB": 10391.8,
+      "aggregates": {
+        "totalRunHours": 1.87,
+        "totalFocusHours": 0.13
+      },
+      "hourlyStats": [
+        {
+          "hour": "11:00",
+          "focusSeconds": 180,
+          "runSeconds": 2520
+        },
+        {
+          "hour": "12:00",
+          "focusSeconds": 300,
+          "runSeconds": 4200
+        }
+      ]
+    }
+  ],
+  "hourlySummary": [
+    {
+      "hour": "11:00",
+      "productiveFocusSec": 0,
+      "communicationFocusSec": 0,
+      "idleSec": 0
+    },
+    {
+      "hour": "12:00",
+      "productiveFocusSec": 120,
+      "communicationFocusSec": 0,
+      "idleSec": 0
+    }
+  ]
+}</code></pre>
+
+        }
+}</code></pre>
+        </div>
+    </div>
+
+    <h2>SQL Database Schema (Oracle)</h2>
+    <p>When migrating to Oracle SQL, consider the following base tables:</p>
+
+    <h3>1. Users</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>user_id</td><td>VARCHAR2</td><td>Unique user identifier</td></tr>
+        <tr><td>name</td><td>VARCHAR2</td><td>User's name</td></tr>
+        <tr><td>department</td><td>VARCHAR2</td><td>Department/Team</td></tr>
+        <tr><td>...</td><td>...</td><td>Additional fields</td></tr>
+    </table>
+
+    <h3>2. Applications</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>app_id</td><td>VARCHAR2</td><td>Unique application ID</td></tr>
+        <tr><td>application_name</td><td>VARCHAR2</td><td>Name of the application</td></tr>
+        <tr><td>category</td><td>VARCHAR2</td><td>App category (work, learn)</td></tr>
+        <tr><td>...</td><td>...</td><td>Additional fields</td></tr>
+    </table>
+
+    <h3>3. Projects</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>project_id</td><td>VARCHAR2</td><td>Unique project ID</td></tr>
+        <tr><td>project_name</td><td>VARCHAR2</td><td>Name of the project</td></tr>
+        <tr><td>...</td><td>...</td><td>Additional fields</td></tr>
+    </table>
+
+    <h3>4. Activity</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>activity_id</td><td>NUMBER</td><td>Primary key</td></tr>
+        <tr><td>timestamp</td><td>DATE</td><td>Activity timestamp</td></tr>
+        <tr><td>user_id</td><td>VARCHAR2</td><td>Foreign key to Users</td></tr>
+        <tr><td>app_id</td><td>VARCHAR2</td><td>Foreign key to Applications</td></tr>
+        <tr><td>project_id</td><td>VARCHAR2</td><td>Foreign key to Projects</td></tr>
+        <tr><td>activity_type</td><td>VARCHAR2</td><td>Type of activity</td></tr>
+        <tr><td>duration_seconds</td><td>NUMBER</td><td>Duration in seconds</td></tr>
+        <tr><td>cpu_usage</td><td>NUMBER</td><td>CPU usage (optional)</td></tr>
+        <tr><td>memory_usage</td><td>NUMBER</td><td>Memory usage (optional)</td></tr>
+        <tr><td>...</td><td>...</td><td>Additional metrics</td></tr>
+    </table>
+
+    <h3>5. Health Metrics (Optional)</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>metric_id</td><td>NUMBER</td><td>Primary key</td></tr>
+        <tr><td>user_id</td><td>VARCHAR2</td><td>Foreign key to Users</td></tr>
+        <tr><td>timestamp</td><td>DATE</td><td>Metric timestamp</td></tr>
+        <tr><td>metric_type</td><td>VARCHAR2</td><td>(e.g., steps, heart)</td></tr>
+        <tr><td>value</td><td>NUMBER</td><td>Metric value</td></tr>
+    </table>
+
+    <h3>6. Learning Details (Optional)</h3>
+    <table>
+        <tr><th>Column Name</th><th>Data Type</th><th>Description</th></tr>
+        <tr><td>learning_id</td><td>NUMBER</td><td>Primary key</td></tr>
+        <tr><td>user_id</td><td>VARCHAR2</td><td>Foreign key to Users</td></tr>
+        <tr><td>timestamp</td><td>DATE</td><td>Learning timestamp</td></tr>
+        <tr><td>course_name</td><td>VARCHAR2</td><td>Name of the course</td></tr>
+        <tr><td>duration_minutes</td><td>NUMBER</td><td>Duration in minutes</td></tr>
+        <tr><td>completion_status</td><td>VARCHAR2</td><td>Status (e.g., completed, in-progress)</td></tr>
+        <tr><td>...</td><td>...</td><td>Additional fields</td></tr>
+    </table>
+
+    <h2>UI Search & Filter</h2>
+    <ul>
+        <li>By time range: <code>timestamp BETWEEN :start AND :end</code></li>
+        <li>By application: <code>application_name = :app_name</code></li>
+        <li>By project: <code>project_name = :project_name</code></li>
+    </ul>
+
+    <h2>Future Considerations</h2>
+    <ul>
+        <li>Implement ETL scripts to aggregate and migrate JSONL data to Oracle SQL</li>
+        <li>Optimize indexes for fast search/filter</li>
+        <li>Add role-based access for data privacy</li>
+    </ul>
+</body>
+</html>

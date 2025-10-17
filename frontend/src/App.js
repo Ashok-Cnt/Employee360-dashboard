@@ -11,6 +11,7 @@ import LearningProgress from './pages/LearningProgress';
 import HealthMetrics from './pages/HealthMetrics';
 import AIInsights from './pages/AIInsights';
 import ApplicationActivity from './pages/ApplicationActivity';
+import AlertRules from './pages/AlertRules';
 
 const drawerWidth = 240; // keep for potential responsive logic
 
@@ -117,6 +118,7 @@ function App() {
           <Route path="/health" element={<HealthMetrics currentUser={currentUser} />} />
           <Route path="/insights" element={<AIInsights currentUser={currentUser} />} />
           <Route path="/application-activity" element={<ApplicationActivity />} />
+          <Route path="/alert-rules" element={<AlertRules />} />
         </Routes>
       </Box>
     </Box>
