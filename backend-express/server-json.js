@@ -2,36 +2,76 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { MongoClient } = require('mongodb');
 const path = require('path');
+const fs = require('fs').promises;
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 8001;
 
-// MongoDB connection configuration
-// Determine which database to use based on USE_LOCAL_DB flag
-const USE_LOCAL_DB = process.env.USE_LOCAL_DB === 'true';
+// Data directory configuration
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const ACTIVITY_FILE = path.join(DATA_DIR, 'application_activity.json');
+const SUGGESTIONS_FILE = path.join(DATA_DIR, 'ai_suggestions.json');
 
-let MONGODB_URI;
-let DATABASE_NAME;
-
-if (USE_LOCAL_DB) {
-  MONGODB_URI = process.env.MONGODB_LOCAL_URI || 'mongodb://localhost:27017/';
-  DATABASE_NAME = process.env.LOCAL_DATABASE_NAME || 'employee360';
-  console.log('🏠 Using LOCAL MongoDB connection');
-} else {
-  MONGODB_URI = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI;
-  DATABASE_NAME = process.env.ATLAS_DATABASE_NAME || process.env.DATABASE_NAME || 'employee360';
-  console.log('☁️  Using ATLAS MongoDB connection');
+// Ensure data directory exists
+async function ensureDataDirectory() {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    console.log('📁 Data directory ready');
+    
+    // Initialize empty JSON files if they don't exist
+    const files = [
+      { path: USERS_FILE, data: [] },
+      { path: ACTIVITY_FILE, data: [] },
+      { path: SUGGESTIONS_FILE, data: [] }
+    ];
+    
+    for (const file of files) {
+      try {
+        await fs.access(file.path);
+      } catch {
+        await fs.writeFile(file.path, JSON.stringify(file.data, null, 2));
+        console.log(`📄 Created ${path.basename(file.path)}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error setting up data directory:', error);
+  }
 }
 
-console.log(`📊 Database: ${DATABASE_NAME}`);
-console.log(`🔗 Connection: ${MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')}`); // Hide password in logs
+// Helper function to read JSON file
+async function readJSONFile(filePath) {
+  try {
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`Error reading ${filePath}:`, error);
+    return [];
+  }
+}
 
-// MongoDB connection
-let db;
-const mongoClient = new MongoClient(MONGODB_URI);
+// Helper function to write JSON file
+async function writeJSONFile(filePath, data) {
+  try {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`Error writing ${filePath}:`, error);
+    return false;
+  }
+}
+
+// Make file operations available to routes
+app.locals.dataDir = DATA_DIR;
+app.locals.readJSONFile = readJSONFile;
+app.locals.writeJSONFile = writeJSONFile;
+app.locals.files = {
+  users: USERS_FILE,
+  activity: ACTIVITY_FILE,
+  suggestions: SUGGESTIONS_FILE
+};
 
 // Middleware
 app.use(helmet());
@@ -43,46 +83,37 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database connection
-async function connectToDatabase() {
-  try {
-    await mongoClient.connect();
-    db = mongoClient.db(DATABASE_NAME);
-    console.log(`✅ Connected to MongoDB: ${DATABASE_NAME} (${USE_LOCAL_DB ? 'Local' : 'Atlas'})`);
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    console.error('💡 Tip: Check your .env file and ensure USE_LOCAL_DB is set correctly');
-    process.exit(1);
-  }
-}
-
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     timestamp: new Date(),
-    database: db ? 'connected' : 'disconnected'
+    storage: 'JSON files',
+    dataDirectory: DATA_DIR
   });
 });
 
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Employee360 Express API is running',
-    version: '1.0.0',
+    version: '2.0.0',
+    storage: 'Local JSON Files',
     endpoints: {
       health: '/health',
       users: '/api/users',
       apps: '/api/apps',
-      alerts: '/api/alerts'
+      alerts: '/api/alerts',
+      activity: '/api/activity',
+      aiSuggestions: '/api/ai-suggestions'
     }
   });
 });
 
 // Import route handlers
-const userRoutes = require('./routes/users');
-const appRoutes = require('./routes/applications');
-const aiSuggestionsRoutes = require('./routes/ai-suggestions');
-const activityLocalRoutes = require('./routes/activity-local');
+const userRoutes = require('./routes/users-json');
+const appRoutes = require('./routes/applications-json');
+const aiSuggestionsRoutes = require('./routes/ai-suggestions-json');
+const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL reader router
 const alertsRoutes = require('./routes/alerts');
 
 // Routes
@@ -110,13 +141,14 @@ app.use((req, res) => {
 async function startServer() {
   try {
     const startTime = Date.now();
-    await connectToDatabase();
+    await ensureDataDirectory();
     
     app.listen(PORT, '127.0.0.1', () => {
       const bootTime = Date.now() - startTime;
       console.log(`🚀 Employee360 Express server running on http://127.0.0.1:${PORT}`);
       console.log(`⚡ Server started in ${bootTime}ms`);
       console.log(`📊 Dashboard available at http://localhost:3000`);
+      console.log(`💾 Storage: Local JSON Files in ${DATA_DIR}`);
       console.log(`🔍 API docs available at http://127.0.0.1:${PORT}/health`);
       console.log(`💾 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     });
@@ -130,12 +162,8 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down server...');
-  await mongoClient.close();
   process.exit(0);
 });
-
-// Make db available to routes
-app.locals.db = () => db;
 
 startServer().catch((error) => {
   console.error('❌ Unhandled error during startup:', error);

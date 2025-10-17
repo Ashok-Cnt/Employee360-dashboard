@@ -4,9 +4,19 @@ const fs = require('fs').promises;
 const path = require('path');
 const readline = require('readline');
 const fs_stream = require('fs');
+const os = require('os');
 
 // Get data directory from environment or use default
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../../data-collector/activity_data');
+
+/**
+ * Get the current logged-in username
+ * This will automatically detect the Windows/Linux/Mac username
+ */
+function getLoggedInUsername() {
+  // Try environment variable first (for override), then use OS username
+  return process.env.USER_ID || os.userInfo().username || 'Admin';
+}
 
 /**
  * Get list of available dates with activity data
@@ -39,7 +49,7 @@ router.get('/available-dates', async (req, res) => {
 router.get('/daily-summary/:date', async (req, res) => {
   try {
     const { date } = req.params;
-    const userId = req.query.user_id || process.env.USER_ID || 'Admin';
+    const userId = req.query.user_id || getLoggedInUsername();
     
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -79,7 +89,7 @@ router.get('/daily-summary/:date', async (req, res) => {
 router.get('/today', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const userId = req.query.user_id || process.env.USER_ID || 'Admin';
+    const userId = req.query.user_id || getLoggedInUsername();
     
     const jsonlFile = path.join(DATA_DIR, `activity_${today}_${userId}.jsonl`);
     
@@ -156,7 +166,7 @@ router.get('/today', async (req, res) => {
 router.get('/raw-data/:date', async (req, res) => {
   try {
     const { date } = req.params;
-    const userId = req.query.user_id || process.env.USER_ID || 'Admin';
+    const userId = req.query.user_id || getLoggedInUsername();
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
     
@@ -220,7 +230,7 @@ router.get('/raw-data/:date', async (req, res) => {
 router.get('/current', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const userId = req.query.user_id || process.env.USER_ID || 'Admin';
+    const userId = req.query.user_id || getLoggedInUsername();
     
     const jsonlFile = path.join(DATA_DIR, `activity_${today}_${userId}.jsonl`);
     
@@ -257,7 +267,7 @@ router.get('/stats', async (req, res) => {
   try {
     const startDate = req.query.start_date || new Date().toISOString().split('T')[0];
     const endDate = req.query.end_date || startDate;
-    const userId = req.query.user_id || process.env.USER_ID || 'Admin';
+    const userId = req.query.user_id || getLoggedInUsername();
     
     const start = new Date(startDate);
     const end = new Date(endDate);

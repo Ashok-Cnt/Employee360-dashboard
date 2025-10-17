@@ -11,6 +11,8 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  Button,
+  IconButton,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -29,6 +31,7 @@ import {
   Battery50,
   Battery20,
   BatteryAlert,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
@@ -45,6 +48,12 @@ import {
 } from 'chart.js';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
+import { 
+  MemoizedBarChart, 
+  MemoizedLineChart, 
+  MemoizedDoughnutChart,
+  MemoizedStatsSection 
+} from '../components/MemoizedCharts';
 
 // Register Chart.js components
 ChartJS.register(
@@ -59,21 +68,25 @@ ChartJS.register(
   BarElement
 );
 
-const MetricCard = ({ title, value, icon, color = '#1976d2' }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ color, mr: 1 }}>{icon}</Box>
-        <Typography variant="h6" component="h2">
-          {title}
+// Memoized MetricCard - only re-renders when props change
+const MetricCard = React.memo(({ title, value, icon, color = '#1976d2' }) => {
+  console.log('🔄 MetricCard re-render:', title);
+  return (
+    <Card sx={{ height: '100%' }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ color, mr: 1 }}>{icon}</Box>
+          <Typography variant="h6" component="h2">
+            {title}
+          </Typography>
+        </Box>
+        <Typography variant="h3" component="div" sx={{ color, fontWeight: 'bold' }}>
+          {value}
         </Typography>
-      </Box>
-      <Typography variant="h3" component="div" sx={{ color, fontWeight: 'bold' }}>
-        {value}
-      </Typography>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+});
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -87,42 +100,43 @@ const Dashboard = () => {
   const systemUser = useSelector((state) => state.user.systemUser);
   const systemUserLoading = useSelector((state) => state.user.systemUserLoading);
 
-  // Fetch application activity data and system user
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch today's activity data from new JSONL endpoint
-        const response = await fetch('/api/activity/today');
-        if (response.ok) {
-          const data = await response.json();
-          setActivityData(data);
-        } else if (response.status === 404) {
-          setActivityData({ apps: [], system: {}, hourlySummary: [] });
-        } else {
-          throw new Error('Failed to fetch activity data');
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.message);
+  // Fetch application activity data - extracted for manual refresh
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch today's activity data from new JSONL endpoint
+      const response = await fetch('/api/activity/today');
+      if (response.ok) {
+        const data = await response.json();
+        setActivityData(data);
+      } else if (response.status === 404) {
         setActivityData({ apps: [], system: {}, hourlySummary: [] });
-      } finally {
-        setIsLoading(false);
+      } else {
+        throw new Error('Failed to fetch activity data');
       }
-    };
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message);
+      setActivityData({ apps: [], system: {}, hourlySummary: [] });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
+  // Fetch application activity data and system user on mount
+  useEffect(() => {
     // Fetch system user information
     dispatch(fetchSystemUser());
     
     fetchData();
     
-    // Set up periodic refresh
-    const interval = setInterval(fetchData, 60000); // Refresh every minute
+    // Set up periodic refresh every minute
+    const interval = setInterval(fetchData, 60000);
     
     return () => clearInterval(interval);
-  }, [dispatch]);
+  }, [dispatch, fetchData]);
   
   // Get greeting message with Windows system username
   const getGreeting = () => {
@@ -561,23 +575,40 @@ const Dashboard = () => {
   return (
     <Box sx={{ flexGrow: 1, width: '100%', maxWidth: '100%', pl: 0 }}>
       <Box sx={{ mb: 3 }}>
-        {/* Display Windows system login username (not database user) */}
-        <Typography variant="h4" gutterBottom>
-          {systemUserLoading && !systemUser ? (
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={20} />
-              Getting system user...
-            </Box>
-          ) : (
-            getGreeting()
-          )}! 👋
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Welcome to your Employee360 Dashboard
-          {systemUser && (
-            <span> • Logged in as: <strong>{systemUser.username}</strong></span>
-          )}
-        </Typography>        {/* Current Focused Application Alert */}
+        {/* Header with Refresh Button */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box>
+            {/* Display Windows system login username (not database user) */}
+            <Typography variant="h4" gutterBottom>
+              {systemUserLoading && !systemUser ? (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={20} />
+                  Getting system user...
+                </Box>
+              ) : (
+                getGreeting()
+              )}! 👋
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Welcome to your Employee360 Dashboard
+              {systemUser && (
+                <span> • Logged in as: <strong>{systemUser.username}</strong></span>
+              )}
+            </Typography>
+          </Box>
+          {/* Refresh Button */}
+          <Tooltip title="Refresh dashboard data">
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={fetchData}
+              disabled={isLoading}
+              sx={{ minWidth: '120px' }}
+            >
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </Tooltip>
+        </Box>        {/* Current Focused Application Alert */}
         {(() => {
           const focusedWindow = getFocusedWindow();
           return focusedWindow?.is_focused && (

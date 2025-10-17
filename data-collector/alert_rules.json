@@ -1,0 +1,29 @@
+[
+  {
+    "ruleId": "memory_high",
+    "name": "High Memory Usage Alert",
+    "conditionType": "memory_usage",
+    "threshold": 1,
+    "durationMinutes": 5,
+    "enabled": true,
+    "targetApp": ""
+  },
+  {
+    "ruleId": "system_overrun",
+    "name": "System Overrun Alert",
+    "conditionType": "system_overrun",
+    "threshold": 1,
+    "durationMinutes": 10,
+    "enabled": true,
+    "targetApp": ""
+  },
+  {
+    "ruleId": "34da239e-3bb6-45cc-81d8-08517f1a30f1",
+    "name": "vscode ",
+    "conditionType": "app_overrun",
+    "threshold": 1,
+    "durationMinutes": 1,
+    "enabled": true,
+    "targetApp": "Visual Studio Code"
+  }
+]
