@@ -104,7 +104,8 @@ app.get('/', (req, res) => {
       apps: '/api/apps',
       alerts: '/api/alerts',
       activity: '/api/activity',
-      aiSuggestions: '/api/ai-suggestions'
+      aiSuggestions: '/api/ai-suggestions',
+      healthMetrics: '/api/health'
     }
   });
 });
@@ -115,6 +116,8 @@ const appRoutes = require('./routes/applications-json');
 const aiSuggestionsRoutes = require('./routes/ai-suggestions-json');
 const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL reader router
 const alertsRoutes = require('./routes/alerts');
+const healthMetricsRoutes = require('./routes/health-metrics-v2'); // Enhanced version with backend logic
+const localStorageRoutes = require('./routes/local-storage');
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -122,6 +125,8 @@ app.use('/api/apps', appRoutes);
 app.use('/api/ai-suggestions', aiSuggestionsRoutes);
 app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/health', healthMetricsRoutes);
+app.use('/api/local-storage', localStorageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
