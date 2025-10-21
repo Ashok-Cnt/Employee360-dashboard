@@ -96,6 +96,7 @@ const ApplicationActivity = () => {
   const [mostFocusedApp, setMostFocusedApp] = useState(null);
   const [selectedAppForChart, setSelectedAppForChart] = useState('');
   const [todayAppsData, setTodayAppsData] = useState([]);
+  const [backgroundAppsData, setBackgroundAppsData] = useState(null);
 
   const calculateMostFocusedApp = (apps) => {
     if (!apps || apps.length === 0) {
@@ -319,6 +320,12 @@ const ApplicationActivity = () => {
           if (!selectedAppForChart && data.apps.length > 0) {
             setSelectedAppForChart(data.apps[0].title);
           }
+        }
+        
+        // Store background apps data
+        if (data.backgroundApps) {
+          setBackgroundAppsData(data.backgroundApps);
+          console.log('Background apps data:', data.backgroundApps);
         }
         
         // Convert apps data to summary format
@@ -639,7 +646,7 @@ const ApplicationActivity = () => {
       {/* Overview Stats */}
       {stats && (
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center">
@@ -659,7 +666,27 @@ const ApplicationActivity = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center">
+                  <WindowIcon color="secondary" sx={{ mr: 1 }} />
+                  <Box>
+                    <Typography color="textSecondary" gutterBottom>
+                      Background Apps
+                    </Typography>
+                    <Typography variant="h4">
+                      {backgroundAppsData?.totalApps || 0}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Running in background
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center">
@@ -716,7 +743,7 @@ const ApplicationActivity = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center">
@@ -736,7 +763,7 @@ const ApplicationActivity = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center">

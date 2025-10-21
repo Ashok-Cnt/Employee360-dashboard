@@ -1,0 +1,2414 @@
+{
+  "timestamp": "2025-10-19T00:00:08.877641Z",
+  "system": {
+    "cpuUsage": 5.6,
+    "memoryUsageMB": 24467.0,
+    "batteryPercent": 44,
+    "isCharging": false,
+    "uptimeSec": 479793.0,
+    "idleTimeSec": 1500,
+    "isIdle": false,
+    "aggregates": {
+      "overallMonitoringHours": 3.45,
+      "productiveHours": 1.52,
+      "communicationHours": 0.27,
+      "idleHours": 0.42,
+      "avgCPU": 5.6
+    }
+  },
+  "apps": [
+    {
+      "name": "ms-teams.exe",
+      "title": "Microsoft Teams",
+      "category": "Communication",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 960,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.27
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 300,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 480,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 180,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "msedge.exe",
+      "title": "Microsoft Edge",
+      "category": "Browsers",
+      "isFocused": true,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 3720,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 1.03
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 720,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 480,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 1500,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 1020,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "chrome.exe",
+      "title": "Google Chrome",
+      "category": "Browsers",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 60,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.02
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 60,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mtputty.exe",
+      "title": "Mtputty",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "Code.exe",
+      "title": "Visual Studio Code",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 4440,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 1.23
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 660,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 420,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 1500,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 1860,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "explorer.exe",
+      "title": "Explorer",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 120,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.03
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 120,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "notepad++.exe",
+      "title": "Notepad++",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 780,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.22
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 540,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 240,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "idea64.exe",
+      "title": "Idea64",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 120,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.03
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 120,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "OUTLOOK.EXE",
+      "title": "Microsoft Outlook",
+      "category": "Communication",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "Bruno.exe",
+      "title": "Bruno",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 60,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.02
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 60,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "Notepad.exe",
+      "title": "Notepad",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "sqldeveloper64W.exe",
+      "title": "Sqldeveloper64w",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "SnippingTool.exe",
+      "title": "Snippingtool",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "filezilla.exe",
+      "title": "Filezilla",
+      "category": "Productive",
+      "isFocused": false,
+      "runningTimeSec": 11460,
+      "focusDurationSec": 60,
+      "aggregates": {
+        "totalRunHours": 3.18,
+        "totalFocusHours": 0.02
+      },
+      "hourlyStats": [
+        {
+          "hour": "20:00",
+          "focusSeconds": 0,
+          "runSeconds": 1800
+        },
+        {
+          "hour": "21:00",
+          "focusSeconds": 60,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3240
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "System Idle Process",
+      "title": "System Idle Process",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "",
+      "title": "",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiTray.exe",
+      "title": "Fortitray",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.16_11318093439531863709.exe",
+      "title": "Vera Ls 0.20.16 11318093439531863709",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "fcag.exe",
+      "title": "Fcag",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.20.exe",
+      "title": "Vera Ls 0.20.20",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "msedgewebview2.exe",
+      "title": "Msedgewebview2",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "PhoneExperienceHost.exe",
+      "title": "Phoneexperiencehost",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "MemCompression",
+      "title": "Memcompression",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "scheduler.exe",
+      "title": "Scheduler",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "ENMonitorWindowsUI.exe",
+      "title": "Enmonitorwindowsui",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfetp.exe",
+      "title": "Mfetp",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfemms.exe",
+      "title": "Mfemms",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "fsnotifier.exe",
+      "title": "Fsnotifier",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "SIMService.exe",
+      "title": "Simservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FbMAService.exe",
+      "title": "Fbmaservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "ENMonitorService.exe",
+      "title": "Enmonitorservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "OfficeClickToRun.exe",
+      "title": "Officeclicktorun",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FwSwitchService.exe",
+      "title": "Fwswitchservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "macmnsvc.exe",
+      "title": "Macmnsvc",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "fcags.exe",
+      "title": "Fcags",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "MicrosoftSearchInBing.exe",
+      "title": "Microsoftsearchinbing",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "masvc.exe",
+      "title": "Masvc",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "fcagswd.exe",
+      "title": "Fcagswd",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "MfeEpeHost.exe",
+      "title": "Mfeepehost",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "MNEService.exe",
+      "title": "Mneservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfeensppl.exe",
+      "title": "Mfeensppl",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mcshield.exe",
+      "title": "Mcshield",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfeesp.exe",
+      "title": "Mfeesp",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfefw.exe",
+      "title": "Mfefw",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfehcs.exe",
+      "title": "Mfehcs",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfeatp.exe",
+      "title": "Mfeatp",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "macompatsvc.exe",
+      "title": "Macompatsvc",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mfemactl.exe",
+      "title": "Mfemactl",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "toast32.exe",
+      "title": "Toast32",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiProxy.exe",
+      "title": "Fortiproxy",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiSettings.exe",
+      "title": "Fortisettings",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiSSLVPNdaemon.exe",
+      "title": "Fortisslvpndaemon",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiESNAC.exe",
+      "title": "Fortiesnac",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiVPN.exe",
+      "title": "Fortivpn",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FCDBLog.exe",
+      "title": "Fcdblog",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "uhssvc.exe",
+      "title": "Uhssvc",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FileSyncHelper.exe",
+      "title": "Filesynchelper",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "jucheck.exe",
+      "title": "Jucheck",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "TSVNCache.exe",
+      "title": "Tsvncache",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "SCNotification.exe",
+      "title": "Scnotification",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "DisplayLinkTrayApp.exe",
+      "title": "Displaylinktrayapp",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.16_17278499565612514643.exe",
+      "title": "Vera Ls 0.20.16 17278499565612514643",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FAXCTRL.exe",
+      "title": "Faxctrl",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "ai.exe",
+      "title": "Ai",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiGuardAgent.exe",
+      "title": "Fortiguardagent",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "python.exe",
+      "title": "Python",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "java.exe",
+      "title": "Java",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "mctray.exe",
+      "title": "Mctray",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "jusched.exe",
+      "title": "Jusched",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "deskalerts.exe",
+      "title": "Deskalerts",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "UpdaterUI.exe",
+      "title": "Updaterui",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiWF.exe",
+      "title": "Fortiwf",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.16_7873639954991062990.exe",
+      "title": "Vera Ls 0.20.16 7873639954991062990",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.16_3049611228023251896.exe",
+      "title": "Vera Ls 0.20.16 3049611228023251896",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "WindowsPackageManagerServer.exe",
+      "title": "Windowspackagemanagerserver",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "pet.exe",
+      "title": "Pet",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "InventoryService.exe",
+      "title": "Inventoryservice",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "vera-ls_0.20.16_11784939599498726084.exe",
+      "title": "Vera Ls 0.20.16 11784939599498726084",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "AdobeCollabSync.exe",
+      "title": "Adobecollabsync",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "OneDrive.exe",
+      "title": "Onedrive",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "CcmExec.exe",
+      "title": "Ccmexec",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "Microsoft.Management.Services.IntuneWindowsAgent.exe",
+      "title": "Microsoft.management.services.intunewindowsagent",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "copilot-language-server.exe",
+      "title": "Copilot Language Server",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "OpenConsole.exe",
+      "title": "Openconsole",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "ENSoft.exe",
+      "title": "Ensoft",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FortiSSLVPNsys.exe",
+      "title": "Fortisslvpnsys",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "FileCoAuth.exe",
+      "title": "Filecoauth",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "ENMonitorAgentWindowsUI.exe",
+      "title": "Enmonitoragentwindowsui",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6240,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.73,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3060
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "node.exe",
+      "title": "Node",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 6180,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 1.72,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 3000
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 3180
+        }
+      ]
+    },
+    {
+      "name": "MoUsoCoreWorker.exe",
+      "title": "Mousocoreworker",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 120,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 0.03,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 60
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 60
+        }
+      ]
+    },
+    {
+      "name": "policyHost.exe",
+      "title": "Policyhost",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 1560,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 0.43,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 780
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 780
+        }
+      ]
+    },
+    {
+      "name": "HxTsr.exe",
+      "title": "Hxtsr",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 60,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 0.02,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 60
+        }
+      ]
+    },
+    {
+      "name": "updater.exe",
+      "title": "Updater",
+      "category": "Uncategorized",
+      "isFocused": false,
+      "runningTimeSec": 180,
+      "focusDurationSec": 0,
+      "aggregates": {
+        "totalRunHours": 0.05,
+        "totalFocusHours": 0.0
+      },
+      "hourlyStats": [
+        {
+          "hour": "22:00",
+          "focusSeconds": 0,
+          "runSeconds": 60
+        },
+        {
+          "hour": "23:00",
+          "focusSeconds": 0,
+          "runSeconds": 120
+        }
+      ]
+    }
+  ],
+  "hourlySummary": [
+    {
+      "hour": "20:00",
+      "productiveFocusSec": 780,
+      "communicationFocusSec": 300,
+      "idleSec": 180
+    },
+    {
+      "hour": "21:00",
+      "productiveFocusSec": 1080,
+      "communicationFocusSec": 480,
+      "idleSec": 1080
+    },
+    {
+      "hour": "22:00",
+      "productiveFocusSec": 1740,
+      "communicationFocusSec": 0,
+      "idleSec": 240
+    },
+    {
+      "hour": "23:00",
+      "productiveFocusSec": 1860,
+      "communicationFocusSec": 180,
+      "idleSec": 0
+    }
+  ]
+}

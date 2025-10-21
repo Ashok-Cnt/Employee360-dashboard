@@ -13,6 +13,14 @@ import {
   Tooltip,
   Button,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -33,46 +41,25 @@ import {
   BatteryAlert,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend,
-  ArcElement,
-  BarElement,
-} from 'chart.js';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
-import { 
-  MemoizedBarChart, 
-  MemoizedLineChart, 
-  MemoizedDoughnutChart,
-  MemoizedStatsSection 
-} from '../components/MemoizedCharts';
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  Legend,
-  ArcElement,
-  BarElement
-);
 
 // Memoized MetricCard - only re-renders when props change
-const MetricCard = React.memo(({ title, value, icon, color = '#1976d2' }) => {
+const MetricCard = React.memo(({ title, value, icon, color = '#1976d2', onClick }) => {
   console.log('🔄 MetricCard re-render:', title);
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card 
+      sx={{ 
+        height: '100%',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s',
+        '&:hover': onClick ? {
+          transform: 'translateY(-4px)',
+          boxShadow: 4
+        } : {}
+      }}
+      onClick={onClick}
+    >
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Box sx={{ color, mr: 1 }}>{icon}</Box>
@@ -95,6 +82,14 @@ const Dashboard = () => {
   const [activityData, setActivityData] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [activeAppsDialogOpen, setActiveAppsDialogOpen] = React.useState(false);
+  const [productiveHoursDialogOpen, setProductiveHoursDialogOpen] = React.useState(false);
+  const [productivityScoreDialogOpen, setProductivityScoreDialogOpen] = React.useState(false);
+  const [memoryUsageDialogOpen, setMemoryUsageDialogOpen] = React.useState(false);
+  const [monitoringHoursDialogOpen, setMonitoringHoursDialogOpen] = React.useState(false);
+  const [idleHoursDialogOpen, setIdleHoursDialogOpen] = React.useState(false);
+  const [coursesDialogOpen, setCoursesDialogOpen] = React.useState(false);
+  const [batteryDialogOpen, setBatteryDialogOpen] = React.useState(false);
   
   // Get system user (Windows login user) from Redux store
   const systemUser = useSelector((state) => state.user.systemUser);
@@ -178,100 +173,6 @@ const Dashboard = () => {
       : 0;
     
     return Math.round(focusScore + productivityRatio + focusTimeRatio + monitoringScore);
-  };
-
-  // Application usage data for charts
-  const getApplicationUsageData = () => {
-    if (!activityData || !activityData.apps || activityData.apps.length === 0) {
-      return {
-        labels: ['No Data'],
-        datasets: [{
-          data: [1],
-          backgroundColor: ['#e0e0e0'],
-        }]
-      };
-    }
-
-    const visibleApps = activityData.apps
-      .filter(app => app.name !== 'background_apps')
-      .sort((a, b) => (b.runningTimeSec || 0) - (a.runningTimeSec || 0))
-      .slice(0, 5);
-
-    return {
-      labels: visibleApps.map(app => app.title || app.name),
-      datasets: [{
-        data: visibleApps.map(app => Math.round((app.runningTimeSec || 0) / 60)),
-        backgroundColor: [
-          '#1976d2',
-          '#dc004e',
-          '#9c27b0',
-          '#ff9800',
-          '#4caf50',
-        ],
-      }]
-    };
-  };
-
-  // Get work pattern data based on categories
-  const getWorkPatternData = () => {
-    if (!activityData || !activityData.hourlySummary || activityData.hourlySummary.length === 0) {
-      return {
-        labels: ['No Data'],
-        datasets: [{
-          data: [1],
-          backgroundColor: ['#e0e0e0'],
-        }]
-      };
-    }
-
-    // Aggregate from hourly summary
-    const summary = activityData.hourlySummary.reduce((acc, hour) => {
-      acc.productive += hour.productiveFocusSec || 0;
-      acc.communication += hour.communicationFocusSec || 0;
-      acc.idle += hour.idleSec || 0;
-      return acc;
-    }, { productive: 0, communication: 0, idle: 0 });
-
-    // Also calculate from apps for more detail
-    const appsByCategory = activityData.apps
-      .filter(app => app.name !== 'background_apps')
-      .reduce((acc, app) => {
-        const cat = app.category;
-        if (!acc[cat]) acc[cat] = 0;
-        acc[cat] += app.focusDurationSec || 0;
-        return acc;
-      }, {});
-
-    // Calculate browsers and other activities
-    const browsersTime = (appsByCategory['Browsers'] || 0);
-    const mediaTime = (appsByCategory['Media'] || 0);
-    const otherTime = (appsByCategory['Non-Productive'] || 0);
-
-    // Build chart data - show all main categories
-    const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
-    const data = [
-      Math.round(summary.productive / 60),      // Productive apps
-      Math.round(summary.communication / 60),   // Communication apps
-      Math.round(browsersTime / 60),            // Browser usage
-      Math.round(summary.idle / 60)             // Idle/breaks
-    ];
-    const colors = ['#4caf50', '#2196f3', '#9c27b0', '#ff9800'];
-
-    return {
-      labels: labels,
-      datasets: [{
-        label: 'Time Spent (minutes)',
-        data: data,
-        backgroundColor: colors,
-        borderColor: colors,
-        borderWidth: 2,
-      }]
-    };
-  };
-
-  // Get work pattern breakdown for pie chart
-  const getWorkPatternBreakdown = () => {
-    return getWorkPatternData();
   };
 
   // Calculate total memory usage from current applications
@@ -364,214 +265,6 @@ const Dashboard = () => {
     return '#f44336'; // Red for low battery
   };
 
-  // Line Chart: Focus time per app over hours
-  const getFocusTimePerAppData = () => {
-    if (!activityData || !activityData.apps || activityData.apps.length === 0) {
-      return {
-        labels: [],
-        datasets: []
-      };
-    }
-
-    // Get all unique hours from hourlySummary
-    const hours = activityData.hourlySummary?.map(h => h.hour) || [];
-    
-    // Get top 5 apps by total focus time
-    const topApps = activityData.apps
-      .filter(app => app.name !== 'background_apps' && app.focusDurationSec > 0)
-      .sort((a, b) => (b.focusDurationSec || 0) - (a.focusDurationSec || 0))
-      .slice(0, 5);
-
-    const colors = ['#1976d2', '#dc004e', '#9c27b0', '#ff9800', '#4caf50'];
-
-    const datasets = topApps.map((app, index) => {
-      // Extract hourly focus data for this app
-      const hourlyData = hours.map(hour => {
-        const hourData = app.hourlyStats?.find(h => h.hour === hour);
-        return hourData ? Math.round(hourData.focusSeconds / 60) : 0;
-      });
-
-      return {
-        label: app.title || app.name,
-        data: hourlyData,
-        borderColor: colors[index],
-        backgroundColor: colors[index] + '20',
-        tension: 0.3,
-        fill: true
-      };
-    });
-
-    return {
-      labels: hours,
-      datasets: datasets
-    };
-  };
-
-  // Stacked Bar Chart: Category-wise focus hours per hour
-  const getCategoryFocusPerHourData = () => {
-    if (!activityData || !activityData.hourlySummary || activityData.hourlySummary.length === 0) {
-      return {
-        labels: [],
-        datasets: []
-      };
-    }
-
-    const hours = activityData.hourlySummary.map(h => h.hour);
-
-    // Calculate category focus time for each hour
-    const productiveData = activityData.hourlySummary.map(h => 
-      Math.round((h.productiveFocusSec || 0) / 60)
-    );
-    const communicationData = activityData.hourlySummary.map(h => 
-      Math.round((h.communicationFocusSec || 0) / 60)
-    );
-    
-    // Calculate browser time from apps
-    const browserData = hours.map(hour => {
-      const browsers = activityData.apps.filter(app => 
-        app.category === 'Browsers' && app.name !== 'background_apps'
-      );
-      let totalBrowserTime = 0;
-      browsers.forEach(app => {
-        const hourStat = app.hourlyStats?.find(h => h.hour === hour);
-        if (hourStat) {
-          totalBrowserTime += hourStat.focusSeconds || 0;
-        }
-      });
-      return Math.round(totalBrowserTime / 60);
-    });
-
-    return {
-      labels: hours,
-      datasets: [
-        {
-          label: '🎯 Productive',
-          data: productiveData,
-          backgroundColor: '#4caf50',
-          stack: 'stack1'
-        },
-        {
-          label: '📞 Communication',
-          data: communicationData,
-          backgroundColor: '#2196f3',
-          stack: 'stack1'
-        },
-        {
-          label: '🌐 Browsing',
-          data: browserData,
-          backgroundColor: '#9c27b0',
-          stack: 'stack1'
-        }
-      ]
-    };
-  };
-
-  // Pie Chart: Overall time distribution
-  const getOverallTimeDistributionData = () => {
-    if (!activityData || !activityData.system) {
-      return {
-        labels: ['No Data'],
-        datasets: [{
-          data: [1],
-          backgroundColor: ['#e0e0e0']
-        }]
-      };
-    }
-
-    const productive = activityData.system.aggregates?.productiveHours || 0;
-    const communication = activityData.system.aggregates?.communicationHours || 0;
-    const idle = activityData.system.aggregates?.idleHours || 0;
-    const total = activityData.system.aggregates?.overallMonitoringHours || 0;
-    const other = Math.max(0, total - productive - communication - idle);
-
-    const labels = [];
-    const data = [];
-    const colors = [];
-
-    if (productive > 0) {
-      labels.push(`Productive (${(productive * 60).toFixed(0)}m)`);
-      data.push(productive);
-      colors.push('#4caf50');
-    }
-    if (communication > 0) {
-      labels.push(`Communication (${(communication * 60).toFixed(0)}m)`);
-      data.push(communication);
-      colors.push('#2196f3');
-    }
-    if (other > 0) {
-      labels.push(`Other (${(other * 60).toFixed(0)}m)`);
-      data.push(other);
-      colors.push('#9c27b0');
-    }
-    if (idle > 0) {
-      labels.push(`Idle (${(idle * 60).toFixed(0)}m)`);
-      data.push(idle);
-      colors.push('#ff9800');
-    }
-
-    return {
-      labels: labels.length > 0 ? labels : ['No Activity'],
-      datasets: [{
-        data: data.length > 0 ? data : [1],
-        backgroundColor: colors.length > 0 ? colors : ['#e0e0e0'],
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    };
-  };
-
-  // Heatmap data: Focus intensity over 24 hours
-  const getFocusIntensityHeatmapData = () => {
-    if (!activityData || !activityData.hourlySummary) {
-      return [];
-    }
-
-    // Create array of all 24 hours
-    const allHours = Array.from({ length: 24 }, (_, i) => {
-      const hour = i.toString().padStart(2, '0') + ':00';
-      const hourData = activityData.hourlySummary.find(h => h.hour === hour);
-      
-      const totalFocus = (hourData?.productiveFocusSec || 0) + 
-                        (hourData?.communicationFocusSec || 0);
-      const intensity = Math.round((totalFocus / 3600) * 100); // Percentage of hour
-
-      return {
-        hour: hour,
-        intensity: intensity,
-        focusMinutes: Math.round(totalFocus / 60),
-        productive: Math.round((hourData?.productiveFocusSec || 0) / 60),
-        communication: Math.round((hourData?.communicationFocusSec || 0) / 60),
-        idle: Math.round((hourData?.idleSec || 0) / 60)
-      };
-    });
-
-    return allHours;
-  };
-
-  // Get color for heatmap based on intensity
-  const getHeatmapColor = (intensity) => {
-    if (intensity === 0) return '#f5f5f5';
-    if (intensity < 20) return '#c8e6c9';
-    if (intensity < 40) return '#81c784';
-    if (intensity < 60) return '#4caf50';
-    if (intensity < 80) return '#388e3c';
-    return '#1b5e20';
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-      },
-    },
-  };
-
   return (
     <Box sx={{ flexGrow: 1, width: '100%', maxWidth: '100%', pl: 0 }}>
       <Box sx={{ mb: 3 }}>
@@ -642,6 +335,7 @@ const Dashboard = () => {
             value={getCurrentAppsCount()}
             icon={<Apps />}
             color="#1976d2"
+            onClick={() => setActiveAppsDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -650,6 +344,7 @@ const Dashboard = () => {
             value={`${getProductivityScore()}%`}
             icon={<TrendingUp />}
             color="#4caf50"
+            onClick={() => setProductivityScoreDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -658,6 +353,7 @@ const Dashboard = () => {
             value={formatMemory(getTotalMemoryUsage())}
             icon={<Memory />}
             color="#ff9800"
+            onClick={() => setMemoryUsageDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -666,6 +362,7 @@ const Dashboard = () => {
             value={`${getMonitoringHours().toFixed(1)}h`}
             icon={<Schedule />}
             color="#e91e63"
+            onClick={() => setMonitoringHoursDialogOpen(true)}
           />
         </Grid>
       </Grid>
@@ -678,6 +375,7 @@ const Dashboard = () => {
             value={`${getProductiveHours().toFixed(2)}h`}
             icon={<Work />}
             color="#4caf50"
+            onClick={() => setProductiveHoursDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -686,6 +384,7 @@ const Dashboard = () => {
             value={`${getIdleHours().toFixed(2)}h`}
             icon={<Coffee />}
             color="#ff9800"
+            onClick={() => setIdleHoursDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -694,6 +393,7 @@ const Dashboard = () => {
             value="12"
             icon={<School />}
             color="#ff9800"
+            onClick={() => setCoursesDialogOpen(true)}
           />
         </Grid>
         
@@ -703,7 +403,18 @@ const Dashboard = () => {
           if (batteryInfo) {
             return (
               <Grid item xs={12} sm={6} md={3}>
-                <Card sx={{ height: '100%' }}>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 4
+                    }
+                  }}
+                  onClick={() => setBatteryDialogOpen(true)}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                       <Box sx={{ color: getBatteryColor(batteryInfo), mr: 1 }}>
@@ -736,6 +447,7 @@ const Dashboard = () => {
                   value="78%"
                   icon={<FitnessCenter />}
                   color="#e91e63"
+                  onClick={() => setBatteryDialogOpen(true)}
                 />
               </Grid>
             );
@@ -743,8 +455,8 @@ const Dashboard = () => {
         })()}
       </Grid>
 
-      {/* Charts */}
-  <Grid container spacing={2}>
+      {/* AI Suggestions and Activity Feed */}
+      <Grid container spacing={2}>
         {/* AI Suggestions Section */}
         <Grid item xs={12}>
           <AISuggestions 
@@ -753,293 +465,7 @@ const Dashboard = () => {
           />
         </Grid>
 
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Work Pattern Analysis - Time Distribution
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Breakdown of your daily activities: Focus work, Communication, and Breaks
-            </Typography>
-            <Bar data={getWorkPatternData()} options={{
-              ...chartOptions,
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Time Spent (minutes)'
-                  }
-                }
-              },
-              plugins: {
-                ...chartOptions.plugins,
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      const minutes = context.parsed.y;
-                      const hours = Math.floor(minutes / 60);
-                      const mins = Math.round(minutes % 60);
-                      return `${context.dataset.label}: ${hours}h ${mins}m`;
-                    }
-                  }
-                }
-              }
-            }} />
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Work Pattern Breakdown
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Distribution of your work patterns today
-            </Typography>
-            <Doughnut 
-              data={getWorkPatternBreakdown()} 
-              options={{ 
-                responsive: true,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        const minutes = context.parsed;
-                        const hours = Math.floor(minutes / 60);
-                        const mins = Math.round(minutes % 60);
-                        return `${context.label}: ${hours}h ${mins}m`;
-                      }
-                    }
-                  }
-                },
-              }} 
-            />
-          </Paper>
-        </Grid>
-
-        {/* New Advanced Charts Section */}
-        
-        {/* Line Chart: Focus Time per App */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              📈 Focus Time per Application
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Track how focus time varies across hours for your top apps
-            </Typography>
-            <Line 
-              data={getFocusTimePerAppData()} 
-              options={{
-                responsive: true,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.dataset.label}: ${context.parsed.y} minutes`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    title: {
-                      display: true,
-                      text: 'Focus Time (minutes)'
-                    }
-                  },
-                  x: {
-                    title: {
-                      display: true,
-                      text: 'Hour of Day'
-                    }
-                  }
-                }
-              }}
-            />
-          </Paper>
-        </Grid>
-
-        {/* Stacked Bar Chart: Category-wise Focus per Hour */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              📊 Category-wise Focus Hours
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Breakdown of productive, communication, and browsing time per hour
-            </Typography>
-            <Bar 
-              data={getCategoryFocusPerHourData()} 
-              options={{
-                responsive: true,
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.dataset.label}: ${context.parsed.y} minutes`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  x: {
-                    stacked: true,
-                    title: {
-                      display: true,
-                      text: 'Hour of Day'
-                    }
-                  },
-                  y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    title: {
-                      display: true,
-                      text: 'Focus Time (minutes)'
-                    }
-                  }
-                }
-              }}
-            />
-          </Paper>
-        </Grid>
-
-        {/* Pie Chart: Overall Time Distribution */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              🥧 Overall Time Distribution
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              See how your time is split between productive work, communication, and idle time
-            </Typography>
-            <Doughnut 
-              data={getOverallTimeDistributionData()} 
-              options={{
-                responsive: true,
-                plugins: {
-                  legend: {
-                    position: 'right',
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        const value = context.parsed;
-                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        const percentage = ((value / total) * 100).toFixed(1);
-                        return `${context.label}: ${percentage}%`;
-                      }
-                    }
-                  }
-                }
-              }}
-            />
-          </Paper>
-        </Grid>
-
-        {/* Heatmap: Focus Intensity over 24 Hours */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              🔥 Focus Intensity Heatmap
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Color-coded view of your focus intensity throughout the day
-            </Typography>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(12, 1fr)', 
-              gap: 0.5,
-              mt: 2 
-            }}>
-              {getFocusIntensityHeatmapData().map((hourData, index) => (
-                <Tooltip 
-                  key={index}
-                  title={
-                    <Box>
-                      <Typography variant="caption" display="block">
-                        <strong>{hourData.hour}</strong>
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        Focus: {hourData.focusMinutes} min
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        Productive: {hourData.productive} min
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        Communication: {hourData.communication} min
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        Intensity: {hourData.intensity}%
-                      </Typography>
-                    </Box>
-                  }
-                  arrow
-                >
-                  <Box
-                    sx={{
-                      aspectRatio: '1',
-                      backgroundColor: getHeatmapColor(hourData.intensity),
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      border: '1px solid #e0e0e0',
-                      '&:hover': {
-                        transform: 'scale(1.1)',
-                        zIndex: 10,
-                        boxShadow: 2
-                      }
-                    }}
-                  >
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        fontSize: '0.65rem',
-                        fontWeight: hourData.intensity > 0 ? 'bold' : 'normal',
-                        color: hourData.intensity > 40 ? '#fff' : '#666'
-                      }}
-                    >
-                      {hourData.hour.split(':')[0]}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              ))}
-            </Box>
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-              <Typography variant="caption" color="text.secondary">Low</Typography>
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                {[0, 20, 40, 60, 80, 100].map((intensity, i) => (
-                  <Box 
-                    key={i}
-                    sx={{ 
-                      width: 30, 
-                      height: 15, 
-                      backgroundColor: getHeatmapColor(intensity),
-                      border: '1px solid #e0e0e0'
-                    }} 
-                  />
-                ))}
-              </Box>
-              <Typography variant="caption" color="text.secondary">High</Typography>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Real-time Activity Feed - Last Component */}
+        {/* Real-time Activity Feed */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
@@ -1094,6 +520,1466 @@ const Dashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Active Applications Dialog */}
+      <Dialog 
+        open={activeAppsDialogOpen} 
+        onClose={() => setActiveAppsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Active Applications ({getCurrentAppsCount()})
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.apps && activityData.apps.length > 0 ? (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Currently running applications on your system:
+              </Typography>
+              <List>
+                {activityData.apps
+                  .filter(app => app.name !== 'background_apps')
+                  .sort((a, b) => {
+                    // Sort: focused first, then by running time
+                    if (a.isFocused && !b.isFocused) return -1;
+                    if (!a.isFocused && b.isFocused) return 1;
+                    return (b.runningTimeSec || 0) - (a.runningTimeSec || 0);
+                  })
+                  .map((app, index) => (
+                    <React.Fragment key={index}>
+                      <ListItem>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {app.title || app.name}
+                              {app.isFocused && (
+                                <Chip 
+                                  label="Focused" 
+                                  size="small" 
+                                  color="primary" 
+                                  sx={{ fontSize: '0.7rem' }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              <Typography variant="caption" display="block">
+                                Category: {app.category}
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                Running time: {Math.round((app.runningTimeSec || 0) / 60)} minutes
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                Focus time: {Math.round((app.focusDurationSec || 0) / 60)} minutes
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                Memory: {formatMemory(app.memoryUsageMB || 0)}
+                              </Typography>
+                              {app.cpuUsage !== undefined && (
+                                <Typography variant="caption" display="block">
+                                  CPU: {app.cpuUsage.toFixed(1)}%
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                      {index < activityData.apps.filter(a => a.name !== 'background_apps').length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+              </List>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No active applications detected.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActiveAppsDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Productive Hours Dialog */}
+      <Dialog 
+        open={productiveHoursDialogOpen} 
+        onClose={() => setProductiveHoursDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Productive Hours - Detailed Breakdown
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.apps ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Summary
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 0.5 }}>
+                  Total Productive Hours: <strong>{getProductiveHours().toFixed(2)} hours</strong> ({(getProductiveHours() * 60).toFixed(0)} minutes)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Time spent on productive applications like IDEs, editors, and development tools.
+                </Typography>
+              </Box>
+
+              <Divider sx={{ mb: 2 }} />
+
+              {(() => {
+                const productiveApps = activityData.apps
+                  .filter(app => app.name !== 'background_apps' && app.category === 'Productive')
+                  .map(app => ({
+                    name: app.title || app.name,
+                    focusTime: app.focusDurationSec || 0,
+                    focusTimeMinutes: Math.round((app.focusDurationSec || 0) / 60),
+                    focusTimeHours: ((app.focusDurationSec || 0) / 3600).toFixed(2),
+                    runningTime: app.runningTimeSec || 0,
+                    runningTimeMinutes: Math.round((app.runningTimeSec || 0) / 60),
+                    memoryUsageMB: app.memoryUsageMB || 0
+                  }))
+                  .filter(app => app.focusTime > 0 || app.runningTime > 0)
+                  .sort((a, b) => b.focusTime - a.focusTime);
+
+                return productiveApps.length > 0 ? (
+                  <Box>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Productive Applications ({productiveApps.length})
+                    </Typography>
+                    <List>
+                      {productiveApps.map((app, index) => (
+                        <React.Fragment key={index}>
+                          <ListItem>
+                            <ListItemText
+                              primary={
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                  {app.name}
+                                </Typography>
+                              }
+                              secondary={
+                                <Box sx={{ mt: 1 }}>
+                                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    🎯 <strong>Focus Time:</strong> {app.focusTimeHours} hours ({app.focusTimeMinutes} minutes)
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    ⏱️ <strong>Running Time:</strong> {app.runningTimeMinutes} minutes
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    💾 <strong>Memory:</strong> {formatMemory(app.memoryUsageMB)}
+                                  </Typography>
+                                  {app.focusTime > 0 && (
+                                    <Box sx={{ 
+                                      mt: 1, 
+                                      width: '100%', 
+                                      height: 8, 
+                                      backgroundColor: '#e0e0e0',
+                                      borderRadius: 1,
+                                      overflow: 'hidden'
+                                    }}>
+                                      <Box sx={{ 
+                                        width: `${Math.min(100, (app.focusTime / (getProductiveHours() * 3600)) * 100)}%`,
+                                        height: '100%',
+                                        backgroundColor: '#4caf50',
+                                        transition: 'width 0.3s'
+                                      }} />
+                                    </Box>
+                                  )}
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                          {index < productiveApps.length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+
+                    <Box sx={{ mt: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        💡 <strong>Tip:</strong> Your most productive application was <strong>{productiveApps[0]?.name}</strong> with {productiveApps[0]?.focusTimeHours} hours of focus time.
+                      </Typography>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No productive applications detected during this period.
+                  </Typography>
+                );
+              })()}
+
+              {activityData.hourlySummary && activityData.hourlySummary.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Hourly Breakdown
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {activityData.hourlySummary
+                      .filter(hour => (hour.productiveFocusSec || 0) > 0)
+                      .map((hour, index) => (
+                        <Chip 
+                          key={index}
+                          label={`${hour.hour}: ${Math.round(hour.productiveFocusSec / 60)} min`}
+                          color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No productivity data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProductiveHoursDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Productivity Score Dialog */}
+      <Dialog 
+        open={productivityScoreDialogOpen} 
+        onClose={() => setProductivityScoreDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Productivity Score - {getProductivityScore()}%
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.apps ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  How is your score calculated?
+                </Typography>
+                {(() => {
+                  const visibleApps = activityData.apps.filter(app => app.name !== 'background_apps');
+                  const focusedApp = visibleApps.find(app => app.isFocused);
+                  const productiveApps = visibleApps.filter(app => app.category === 'Productive');
+                  const totalFocusTime = visibleApps.reduce((sum, app) => sum + (app.focusDurationSec || 0), 0);
+                  const totalRunTime = visibleApps.reduce((sum, app) => sum + (app.runningTimeSec || 0), 0);
+                  
+                  const focusScore = focusedApp ? 20 : 0;
+                  const productivityRatio = productiveApps.length > 0 ? (productiveApps.length / visibleApps.length) * 30 : 0;
+                  const focusTimeRatio = totalRunTime > 0 ? (totalFocusTime / totalRunTime) * 30 : 0;
+                  const monitoringScore = activityData.system?.aggregates?.overallMonitoringHours 
+                    ? Math.min(20, activityData.system.aggregates.overallMonitoringHours * 5) 
+                    : 0;
+
+                  return (
+                    <Box>
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            🎯 <strong>Current Focus</strong> {focusedApp ? '(Active)' : '(Inactive)'}
+                          </Typography>
+                          <Typography variant="body2" color="primary">
+                            <strong>{focusScore} / 20 points</strong>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 12, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${(focusScore / 20) * 100}%`,
+                            height: '100%',
+                            backgroundColor: '#4caf50',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {focusedApp ? `Focused on: ${focusedApp.title || focusedApp.name}` : 'No application currently in focus'}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            📊 <strong>Productive Apps Ratio</strong>
+                          </Typography>
+                          <Typography variant="body2" color="primary">
+                            <strong>{productivityRatio.toFixed(1)} / 30 points</strong>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 12, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${(productivityRatio / 30) * 100}%`,
+                            height: '100%',
+                            backgroundColor: '#2196f3',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {productiveApps.length} of {visibleApps.length} apps are productive
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            ⏱️ <strong>Focus Time Efficiency</strong>
+                          </Typography>
+                          <Typography variant="body2" color="primary">
+                            <strong>{focusTimeRatio.toFixed(1)} / 30 points</strong>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 12, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${(focusTimeRatio / 30) * 100}%`,
+                            height: '100%',
+                            backgroundColor: '#9c27b0',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {Math.round((totalFocusTime / 60))} minutes of focus out of {Math.round((totalRunTime / 60))} minutes running
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            📅 <strong>Monitoring Duration</strong>
+                          </Typography>
+                          <Typography variant="body2" color="primary">
+                            <strong>{monitoringScore.toFixed(1)} / 20 points</strong>
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 12, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${(monitoringScore / 20) * 100}%`,
+                            height: '100%',
+                            backgroundColor: '#ff9800',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {getMonitoringHours().toFixed(1)} hours tracked today
+                        </Typography>
+                      </Box>
+
+                      <Divider sx={{ my: 3 }} />
+
+                      <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="h6" sx={{ mb: 1 }}>
+                          Total Score: <strong style={{ color: getProductivityScore() >= 75 ? '#4caf50' : getProductivityScore() >= 50 ? '#ff9800' : '#f44336' }}>
+                            {getProductivityScore()}%
+                          </strong>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {getProductivityScore() >= 75 ? '🎉 Excellent! You\'re having a very productive day!' : 
+                           getProductivityScore() >= 50 ? '👍 Good progress! Keep up the momentum!' : 
+                           '💪 There\'s room for improvement. Try focusing on productive tasks!'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })()}
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Top Productive Applications
+                </Typography>
+                {(() => {
+                  const productiveApps = activityData.apps
+                    .filter(app => app.name !== 'background_apps' && app.category === 'Productive')
+                    .map(app => ({
+                      name: app.title || app.name,
+                      focusTime: app.focusDurationSec || 0,
+                      focusTimeMinutes: Math.round((app.focusDurationSec || 0) / 60)
+                    }))
+                    .filter(app => app.focusTime > 0)
+                    .sort((a, b) => b.focusTime - a.focusTime)
+                    .slice(0, 5);
+
+                  return productiveApps.length > 0 ? (
+                    <List>
+                      {productiveApps.map((app, index) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={`${index + 1}. ${app.name}`}
+                            secondary={`Focus time: ${app.focusTimeMinutes} minutes`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No productive applications detected.
+                    </Typography>
+                  );
+                })()}
+              </Box>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No productivity data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProductivityScoreDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Memory Usage Dialog */}
+      <Dialog 
+        open={memoryUsageDialogOpen} 
+        onClose={() => setMemoryUsageDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Memory Usage - {formatMemory(getTotalMemoryUsage())}
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.apps ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Total Memory Usage
+                </Typography>
+                <Typography variant="h4" sx={{ mb: 2, color: '#ff9800' }}>
+                  {formatMemory(getTotalMemoryUsage())}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Combined memory usage of all active applications
+                </Typography>
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {(() => {
+                const appsWithMemory = activityData.apps
+                  .filter(app => app.name !== 'background_apps' && (app.memoryUsageMB || 0) > 0)
+                  .map(app => ({
+                    name: app.title || app.name,
+                    memoryMB: app.memoryUsageMB || 0,
+                    category: app.category,
+                    isFocused: app.isFocused
+                  }))
+                  .sort((a, b) => b.memoryMB - a.memoryMB);
+
+                const totalMemory = getTotalMemoryUsage();
+
+                return appsWithMemory.length > 0 ? (
+                  <Box>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Applications by Memory Usage ({appsWithMemory.length})
+                    </Typography>
+                    <List>
+                      {appsWithMemory.map((app, index) => {
+                        const percentage = totalMemory > 0 ? ((app.memoryMB / totalMemory) * 100).toFixed(1) : 0;
+                        return (
+                          <React.Fragment key={index}>
+                            <ListItem>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="subtitle1">
+                                      {app.name}
+                                    </Typography>
+                                    {app.isFocused && (
+                                      <Chip 
+                                        label="Focused" 
+                                        size="small" 
+                                        color="primary" 
+                                        sx={{ fontSize: '0.7rem' }}
+                                      />
+                                    )}
+                                    <Chip 
+                                      label={app.category} 
+                                      size="small" 
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem' }}
+                                    />
+                                  </Box>
+                                }
+                                secondary={
+                                  <Box sx={{ mt: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                      <Typography variant="body2">
+                                        💾 {formatMemory(app.memoryMB)}
+                                      </Typography>
+                                      <Typography variant="body2" color="primary">
+                                        {percentage}% of total
+                                      </Typography>
+                                    </Box>
+                                    <Box sx={{ 
+                                      width: '100%', 
+                                      height: 8, 
+                                      backgroundColor: '#e0e0e0',
+                                      borderRadius: 1,
+                                      overflow: 'hidden'
+                                    }}>
+                                      <Box sx={{ 
+                                        width: `${percentage}%`,
+                                        height: '100%',
+                                        backgroundColor: app.memoryMB > 500 ? '#f44336' : app.memoryMB > 200 ? '#ff9800' : '#4caf50',
+                                        transition: 'width 0.3s'
+                                      }} />
+                                    </Box>
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                            {index < appsWithMemory.length - 1 && <Divider />}
+                          </React.Fragment>
+                        );
+                      })}
+                    </List>
+
+                    <Box sx={{ mt: 3, p: 2, backgroundColor: '#fff3e0', borderRadius: 2, border: '1px solid #ff9800' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        💡 Memory Usage Tips:
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        • High memory usage (&gt;500 MB): Consider closing if not in use
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        • Medium memory usage (200-500 MB): Normal for most applications
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        • Low memory usage (&lt;200 MB): Efficient application
+                      </Typography>
+                    </Box>
+
+                    {appsWithMemory[0] && (
+                      <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          🔝 <strong>Highest memory consumer:</strong> {appsWithMemory[0].name} with {formatMemory(appsWithMemory[0].memoryMB)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No memory usage data available for active applications.
+                  </Typography>
+                );
+              })()}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No memory usage data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMemoryUsageDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Monitoring Hours Dialog */}
+      <Dialog 
+        open={monitoringHoursDialogOpen} 
+        onClose={() => setMonitoringHoursDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Monitoring Hours - {getMonitoringHours().toFixed(2)} hours
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.system ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Total Monitoring Time
+                </Typography>
+                <Typography variant="h3" sx={{ mb: 2, color: '#e91e63' }}>
+                  {getMonitoringHours().toFixed(2)} hours
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  {(getMonitoringHours() * 60).toFixed(0)} minutes
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total time your activity has been monitored today
+                </Typography>
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Time Breakdown
+                </Typography>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">
+                      🎯 <strong>Productive Time</strong>
+                    </Typography>
+                    <Typography variant="body2" color="success.main">
+                      {getProductiveHours().toFixed(2)}h ({((getProductiveHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: 12, 
+                    backgroundColor: '#e0e0e0',
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      width: `${(getProductiveHours() / getMonitoringHours()) * 100}%`,
+                      height: '100%',
+                      backgroundColor: '#4caf50',
+                      transition: 'width 0.3s'
+                    }} />
+                  </Box>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">
+                      ☕ <strong>Idle Time</strong>
+                    </Typography>
+                    <Typography variant="body2" color="warning.main">
+                      {getIdleHours().toFixed(2)}h ({((getIdleHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                    </Typography>
+                  </Box>
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: 12, 
+                    backgroundColor: '#e0e0e0',
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      width: `${(getIdleHours() / getMonitoringHours()) * 100}%`,
+                      height: '100%',
+                      backgroundColor: '#ff9800',
+                      transition: 'width 0.3s'
+                    }} />
+                  </Box>
+                </Box>
+
+                {activityData.system.aggregates?.communicationHours > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">
+                        📞 <strong>Communication Time</strong>
+                      </Typography>
+                      <Typography variant="body2" color="info.main">
+                        {activityData.system.aggregates.communicationHours.toFixed(2)}h ({((activityData.system.aggregates.communicationHours / getMonitoringHours()) * 100).toFixed(1)}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 12, 
+                      backgroundColor: '#e0e0e0',
+                      borderRadius: 1,
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{ 
+                        width: `${(activityData.system.aggregates.communicationHours / getMonitoringHours()) * 100}%`,
+                        height: '100%',
+                        backgroundColor: '#2196f3',
+                        transition: 'width 0.3s'
+                      }} />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {activityData.hourlySummary && activityData.hourlySummary.length > 0 && (
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Hourly Activity Timeline
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {activityData.hourlySummary
+                      .filter(hour => (hour.productiveFocusSec || 0) + (hour.communicationFocusSec || 0) + (hour.idleSec || 0) > 0)
+                      .map((hour, index) => {
+                        const totalSec = (hour.productiveFocusSec || 0) + (hour.communicationFocusSec || 0) + (hour.idleSec || 0);
+                        const totalMin = Math.round(totalSec / 60);
+                        return (
+                          <Tooltip 
+                            key={index}
+                            title={
+                              <Box>
+                                <Typography variant="caption" display="block">
+                                  <strong>Hour: {hour.hour}</strong>
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Productive: {Math.round((hour.productiveFocusSec || 0) / 60)} min
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Communication: {Math.round((hour.communicationFocusSec || 0) / 60)} min
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Idle: {Math.round((hour.idleSec || 0) / 60)} min
+                                </Typography>
+                              </Box>
+                            }
+                            arrow
+                          >
+                            <Chip 
+                              label={`${hour.hour}: ${totalMin}m`}
+                              color={totalMin > 30 ? 'success' : totalMin > 15 ? 'primary' : 'default'}
+                              variant={totalMin > 30 ? 'filled' : 'outlined'}
+                              size="small"
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                  </Box>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  📊 <strong>Summary:</strong> You've been monitored for {getMonitoringHours().toFixed(2)} hours today, with {((getProductiveHours() / getMonitoringHours()) * 100).toFixed(1)}% productive time and {((getIdleHours() / getMonitoringHours()) * 100).toFixed(1)}% idle time.
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No monitoring data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMonitoringHoursDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Idle Hours Dialog */}
+      <Dialog 
+        open={idleHoursDialogOpen} 
+        onClose={() => setIdleHoursDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Idle Hours - {getIdleHours().toFixed(2)} hours
+        </DialogTitle>
+        <DialogContent>
+          {activityData && activityData.system ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Total Idle Time
+                </Typography>
+                <Typography variant="h3" sx={{ mb: 2, color: '#ff9800' }}>
+                  {getIdleHours().toFixed(2)} hours
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  {(getIdleHours() * 60).toFixed(0)} minutes
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Time when no application activity was detected (breaks, idle, away from keyboard)
+                </Typography>
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Idle Time Analysis
+                </Typography>
+                
+                {(() => {
+                  const totalHours = getMonitoringHours();
+                  const idleHours = getIdleHours();
+                  const productiveHours = getProductiveHours();
+                  const idlePercentage = totalHours > 0 ? ((idleHours / totalHours) * 100).toFixed(1) : 0;
+                  const productivePercentage = totalHours > 0 ? ((productiveHours / totalHours) * 100).toFixed(1) : 0;
+                  const activePercentage = totalHours > 0 ? (((totalHours - idleHours) / totalHours) * 100).toFixed(1) : 0;
+
+                  return (
+                    <Box>
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            ☕ <strong>Idle Time</strong>
+                          </Typography>
+                          <Typography variant="body2" color="warning.main">
+                            {idlePercentage}% of total time
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 16, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${idlePercentage}%`,
+                            height: '100%',
+                            backgroundColor: '#ff9800',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2">
+                            💻 <strong>Active Time</strong>
+                          </Typography>
+                          <Typography variant="body2" color="success.main">
+                            {activePercentage}% of total time
+                          </Typography>
+                        </Box>
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: 16, 
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: 1,
+                          overflow: 'hidden'
+                        }}>
+                          <Box sx={{ 
+                            width: `${activePercentage}%`,
+                            height: '100%',
+                            backgroundColor: '#4caf50',
+                            transition: 'width 0.3s'
+                          }} />
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })()}
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {activityData.hourlySummary && activityData.hourlySummary.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Hourly Idle Time Breakdown
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {activityData.hourlySummary
+                      .filter(hour => (hour.idleSec || 0) > 0)
+                      .map((hour, index) => {
+                        const idleMin = Math.round((hour.idleSec || 0) / 60);
+                        return (
+                          <Tooltip 
+                            key={index}
+                            title={
+                              <Box>
+                                <Typography variant="caption" display="block">
+                                  <strong>Hour: {hour.hour}</strong>
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Idle: {idleMin} minutes
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Productive: {Math.round((hour.productiveFocusSec || 0) / 60)} min
+                                </Typography>
+                              </Box>
+                            }
+                            arrow
+                          >
+                            <Chip 
+                              label={`${hour.hour}: ${idleMin}m`}
+                              color={idleMin > 30 ? 'warning' : idleMin > 15 ? 'default' : 'success'}
+                              variant={idleMin > 30 ? 'filled' : 'outlined'}
+                              size="small"
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                  </Box>
+                  {activityData.hourlySummary.filter(hour => (hour.idleSec || 0) > 0).length === 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      No idle time recorded in hourly breakdown.
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 2, border: '1px solid #ff9800' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  💡 About Idle Time:
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  • Idle time includes breaks, lunch, meetings away from computer
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  • Regular breaks are important for productivity and health
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  • Recommended: 5-10 minute break every hour
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  • Long idle periods may indicate need to lock workstation
+                </Typography>
+              </Box>
+
+              {(() => {
+                const idlePercentage = getMonitoringHours() > 0 ? ((getIdleHours() / getMonitoringHours()) * 100).toFixed(1) : 0;
+                return (
+                  <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {idlePercentage < 20 ? 
+                        '⚡ Very active day! Remember to take regular breaks.' :
+                        idlePercentage < 40 ?
+                        '👍 Good balance between work and breaks.' :
+                        idlePercentage < 60 ?
+                        '☕ Moderate idle time. This is normal for a typical workday.' :
+                        '⚠️ High idle time detected. Consider reviewing your work schedule.'
+                      }
+                    </Typography>
+                  </Box>
+                );
+              })()}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No idle time data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIdleHoursDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Courses Completed Dialog */}
+      <Dialog 
+        open={coursesDialogOpen} 
+        onClose={() => setCoursesDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Learning Progress - 12 Courses Completed
+        </DialogTitle>
+        <DialogContent>
+          <Box>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Your Learning Journey
+              </Typography>
+              <Typography variant="h3" sx={{ mb: 2, color: '#ff9800' }}>
+                12 Courses
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total courses completed this quarter
+              </Typography>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Recent Completions
+              </Typography>
+              <List>
+                <ListItem>
+                  <ListItemText
+                    primary="Advanced React Patterns"
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" display="block">
+                          Completed: October 15, 2025
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Category: Frontend Development
+                        </Typography>
+                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+                <Divider />
+                <ListItem>
+                  <ListItemText
+                    primary="Python Data Analytics"
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" display="block">
+                          Completed: October 10, 2025
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Category: Data Science
+                        </Typography>
+                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+                <Divider />
+                <ListItem>
+                  <ListItemText
+                    primary="AWS Cloud Architecture"
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" display="block">
+                          Completed: October 5, 2025
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Category: Cloud Computing
+                        </Typography>
+                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+                <Divider />
+                <ListItem>
+                  <ListItemText
+                    primary="Node.js Performance Optimization"
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" display="block">
+                          Completed: September 28, 2025
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Category: Backend Development
+                        </Typography>
+                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+                <Divider />
+                <ListItem>
+                  <ListItemText
+                    primary="UI/UX Design Fundamentals"
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" display="block">
+                          Completed: September 20, 2025
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Category: Design
+                        </Typography>
+                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              </List>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Learning Statistics
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">
+                    📚 <strong>Courses This Quarter</strong>
+                  </Typography>
+                  <Typography variant="body2" color="primary">
+                    12 / 15 (80%)
+                  </Typography>
+                </Box>
+                <Box sx={{ 
+                  width: '100%', 
+                  height: 12, 
+                  backgroundColor: '#e0e0e0',
+                  borderRadius: 1,
+                  overflow: 'hidden'
+                }}>
+                  <Box sx={{ 
+                    width: '80%',
+                    height: '100%',
+                    backgroundColor: '#ff9800',
+                    transition: 'width 0.3s'
+                  }} />
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  3 more to reach your quarterly goal
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Hours
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#ff9800' }}>
+                    48 hours
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Certificates
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#4caf50' }}>
+                    12
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Avg. Score
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#2196f3' }}>
+                    92%
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 2, border: '1px solid #2196f3' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                🎯 Keep Learning!
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                You're 80% towards your quarterly learning goal. Complete 3 more courses to achieve 100% and earn a bonus badge!
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCoursesDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Battery/Health Dialog */}
+      <Dialog 
+        open={batteryDialogOpen} 
+        onClose={() => setBatteryDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {(() => {
+            const batteryInfo = getBatteryInfo();
+            return batteryInfo ? `Battery Status - ${batteryInfo.percent}%` : 'System Health Score - 78%';
+          })()}
+        </DialogTitle>
+        <DialogContent>
+          {(() => {
+            const batteryInfo = getBatteryInfo();
+            
+            if (batteryInfo) {
+              // Laptop with battery
+              return (
+                <Box>
+                  <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Box sx={{ fontSize: 80, color: getBatteryColor(batteryInfo) }}>
+                      {getBatteryIcon(batteryInfo)}
+                    </Box>
+                    <Typography variant="h2" sx={{ mb: 1, color: getBatteryColor(batteryInfo) }}>
+                      {batteryInfo.percent}%
+                    </Typography>
+                    <Chip 
+                      label={batteryInfo.isCharging ? '🔌 Charging' : '🔋 On Battery'} 
+                      color={batteryInfo.isCharging ? 'success' : 'default'}
+                      sx={{ fontSize: '1rem', py: 2 }}
+                    />
+                  </Box>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Battery Status
+                    </Typography>
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 40, 
+                      backgroundColor: '#e0e0e0',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}>
+                      <Box sx={{ 
+                        width: `${batteryInfo.percent}%`,
+                        height: '100%',
+                        backgroundColor: getBatteryColor(batteryInfo),
+                        transition: 'width 0.3s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                          {batteryInfo.percent}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Battery Health Tips
+                    </Typography>
+                    <List>
+                      <ListItem>
+                        <ListItemText
+                          primary="Optimal Charging Range"
+                          secondary="Keep battery between 20% - 80% for longevity"
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText
+                          primary="Charging Status"
+                          secondary={batteryInfo.isCharging ? 
+                            "Currently charging - unplug when reaching 80-90%" : 
+                            "On battery - plug in before reaching 20%"
+                          }
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText
+                          primary="Battery Health"
+                          secondary={
+                            batteryInfo.percent > 80 ? "Excellent battery level" :
+                            batteryInfo.percent > 50 ? "Good battery level" :
+                            batteryInfo.percent > 20 ? "Consider charging soon" :
+                            "Low battery - charge immediately"
+                          }
+                        />
+                      </ListItem>
+                    </List>
+                  </Box>
+
+                  <Box sx={{ 
+                    p: 2, 
+                    backgroundColor: batteryInfo.percent < 20 ? '#ffebee' : '#e8f5e9', 
+                    borderRadius: 2,
+                    border: `1px solid ${batteryInfo.percent < 20 ? '#f44336' : '#4caf50'}`
+                  }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      {batteryInfo.percent < 20 ? '⚠️ Low Battery Warning' : 
+                       batteryInfo.percent > 80 ? '✅ Battery Level Good' : 
+                       '💡 Battery Status Normal'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {batteryInfo.percent < 20 ? 
+                        'Your battery is running low. Please connect your charger to avoid data loss.' :
+                        batteryInfo.percent > 80 ?
+                        'Your battery is well charged. You can unplug and work on battery power.' :
+                        'Battery level is adequate for normal use. Monitor the percentage regularly.'
+                      }
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            } else {
+              // Desktop system - Health Score
+              return (
+                <Box>
+                  <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Box sx={{ fontSize: 80, color: '#e91e63' }}>
+                      <FitnessCenter sx={{ fontSize: 80 }} />
+                    </Box>
+                    <Typography variant="h2" sx={{ mb: 1, color: '#e91e63' }}>
+                      78%
+                    </Typography>
+                    <Chip 
+                      label="System Health Score" 
+                      color="secondary"
+                      sx={{ fontSize: '1rem', py: 2 }}
+                    />
+                  </Box>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Health Score Breakdown
+                    </Typography>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">
+                          💻 <strong>System Performance</strong>
+                        </Typography>
+                        <Typography variant="body2" color="success.main">
+                          85%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 12, 
+                        backgroundColor: '#e0e0e0',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          width: '85%',
+                          height: '100%',
+                          backgroundColor: '#4caf50',
+                          transition: 'width 0.3s'
+                        }} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">
+                          💾 <strong>Memory Management</strong>
+                        </Typography>
+                        <Typography variant="body2" color="warning.main">
+                          70%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 12, 
+                        backgroundColor: '#e0e0e0',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          width: '70%',
+                          height: '100%',
+                          backgroundColor: '#ff9800',
+                          transition: 'width 0.3s'
+                        }} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">
+                          📊 <strong>Resource Usage</strong>
+                        </Typography>
+                        <Typography variant="body2" color="success.main">
+                          82%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 12, 
+                        backgroundColor: '#e0e0e0',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          width: '82%',
+                          height: '100%',
+                          backgroundColor: '#4caf50',
+                          transition: 'width 0.3s'
+                        }} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2">
+                          🎯 <strong>Application Efficiency</strong>
+                        </Typography>
+                        <Typography variant="body2" color="warning.main">
+                          75%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 12, 
+                        backgroundColor: '#e0e0e0',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}>
+                        <Box sx={{ 
+                          width: '75%',
+                          height: '100%',
+                          backgroundColor: '#ff9800',
+                          transition: 'width 0.3s'
+                        }} />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      System Recommendations
+                    </Typography>
+                    <List>
+                      <ListItem>
+                        <ListItemText
+                          primary="✅ System Performance"
+                          secondary="Your system is running smoothly with good performance metrics"
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText
+                          primary="⚠️ Memory Optimization"
+                          secondary="Consider closing unused applications to free up memory"
+                        />
+                      </ListItem>
+                      <Divider />
+                      <ListItem>
+                        <ListItemText
+                          primary="💡 Resource Management"
+                          secondary="Resource usage is optimal. Continue monitoring for best performance"
+                        />
+                      </ListItem>
+                    </List>
+                  </Box>
+
+                  <Box sx={{ p: 2, backgroundColor: '#f3e5f5', borderRadius: 2, border: '1px solid #e91e63' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      💪 Good System Health!
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Your system health score of 78% indicates good overall performance. Keep optimizing memory usage to improve further.
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            }
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBatteryDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -35,7 +35,7 @@ APP_CATEGORIES = {
         'Adobe Illustrator', 'MongoDB Compass', 'Postman', 'Sublime Text', 'Notepad++',
         'Visual Studio', 'Eclipse', 'NetBeans', 'Android Studio', 'SQL Developer', 'Sqldeveloper64w',
         'Oracle SQL Developer', 'DBeaver', 'DataGrip', 'Bruno', 'Insomnia',
-        'Microsoft OneNote', 'Evernote', 'Notion', 'Obsidian',
+        'Microsoft OneNote', 'OneNote', 'ONENOTEM', 'Evernote', 'Notion', 'Obsidian', 'Notepad',
         'Git', 'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
         'WinSCP', 'PuTTY', 'mPuTTY', 'KiTTY', 'MobaXterm', 'SecureCRT'
     ],
@@ -55,6 +55,30 @@ APP_CATEGORIES = {
         'Steam', 'EA Origin', 'Epic Games Launcher', 'Battle.net', 'Xbox',
         'Facebook', 'Instagram', 'Twitter', 'Reddit', 'TikTok'
     ]
+}
+
+# Display Name Mappings - Map process names to friendly display names
+APP_DISPLAY_NAMES = {
+    'Idea64.exe': 'IntelliJ IDEA',
+    'idea64.exe': 'IntelliJ IDEA',
+    'Sqldeveloper64w.exe': 'SQL Developer',
+    'sqldeveloper64w.exe': 'SQL Developer',
+    'ONENOTE.EXE': 'OneNote',
+    'onenote.exe': 'OneNote',
+    'ONENOTEM.EXE': 'OneNote',
+    'onenotem.exe': 'OneNote',
+    'notepad.exe': 'Notepad',
+    'NOTEPAD.EXE': 'Notepad',
+    'Code.exe': 'Visual Studio Code',
+    'code.exe': 'Visual Studio Code',
+    'chrome.exe': 'Google Chrome',
+    'firefox.exe': 'Mozilla Firefox',
+    'msedge.exe': 'Microsoft Edge',
+    'WINWORD.EXE': 'Microsoft Word',
+    'EXCEL.EXE': 'Microsoft Excel',
+    'POWERPNT.EXE': 'Microsoft PowerPoint',
+    'OUTLOOK.EXE': 'Microsoft Outlook',
+    'Teams.exe': 'Microsoft Teams'
 }
 
 class ActivityTracker:
@@ -82,7 +106,7 @@ class ActivityTracker:
             'last_seen': None,
             'is_focused': False,
             'window_titles': [],
-            'focus_switches': []  # List of {'from': datetime, 'to': datetime, 'window_title': str}
+            'focus_switches': []  # List of {'from': datetime, 'to': datetime, 'window_title': str, 'totalHours': float, 'courseName': str (optional for Browsers with Udemy)}
         })
         
         self.hourly_summary = defaultdict(lambda: {
@@ -127,6 +151,9 @@ class ActivityTracker:
         if platform.system() == 'Windows':
             self.user32 = ctypes.windll.user32
             self.kernel32 = ctypes.windll.kernel32
+        
+        # Load existing data from today's file to continue tracking
+        self.load_existing_data()
     
     def is_window_visible(self, hwnd):
         """Check if a window is visible and has taskbar presence"""
@@ -234,6 +261,110 @@ class ActivityTracker:
             date = datetime.now().date()
         filename = f"activity_{date.isoformat()}_{self.user_id}.jsonl"
         return self.data_dir / filename
+    
+    def load_existing_data(self):
+        """Load existing data from today's JSONL file to restore state"""
+        jsonl_file = self.get_jsonl_filename()
+        
+        if not jsonl_file.exists():
+            logger.info(f"No existing data file found for today: {jsonl_file}")
+            return
+        
+        try:
+            logger.info(f"Loading existing data from: {jsonl_file}")
+            
+            # Read all lines from the JSONL file
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            if not lines:
+                logger.info("JSONL file is empty")
+                return
+            
+            # Get the last snapshot to restore the most recent state
+            last_snapshot = json.loads(lines[-1])
+            
+            logger.info(f"Found {len(lines)} existing snapshots, restoring from last snapshot")
+            
+            # Restore app tracking data from the last snapshot
+            for app in last_snapshot.get('apps', []):
+                app_key = app['name']
+                
+                # Skip the aggregated background apps entry
+                if app_key == 'background_apps':
+                    continue
+                
+                # Get friendly name for this process
+                friendly_name = self.get_friendly_app_name(app_key)
+                
+                # Restore app tracking state
+                self.app_tracking[app_key] = {
+                    'name': app['name'],
+                    'title': friendly_name,  # Use friendly name instead of stored title
+                    'category': app['category'],
+                    'total_run_seconds': app['runningTimeSec'],
+                    'total_focus_seconds': app['focusDurationSec'],
+                    'hourly_stats': defaultdict(lambda: {'focus_seconds': 0, 'run_seconds': 0}),
+                    'last_seen': datetime.now(),
+                    'is_focused': app['isFocused'],
+                    'window_titles': app.get('windowTitles', []),
+                    'focus_switches': app.get('focusSwitches', [])
+                }
+                
+                # Restore hourly stats
+                for hourly_stat in app.get('hourlyStats', []):
+                    hour = hourly_stat['hour']
+                    self.app_tracking[app_key]['hourly_stats'][hour] = {
+                        'focus_seconds': hourly_stat['focusSeconds'],
+                        'run_seconds': hourly_stat['runSeconds']
+                    }
+            
+            # Restore hourly summary
+            for hourly in last_snapshot.get('hourlySummary', []):
+                hour = hourly['hour']
+                self.hourly_summary[hour] = {
+                    'productive_focus_sec': hourly['productiveFocusSec'],
+                    'communication_focus_sec': hourly['communicationFocusSec'],
+                    'browsers_focus_sec': 0,  # Not stored in old format
+                    'media_focus_sec': 0,  # Not stored in old format
+                    'non_productive_focus_sec': 0,  # Not stored in old format
+                    'idle_sec': hourly['idleSec'],
+                    'total_cpu': [],
+                    'total_memory': []
+                }
+            
+            # Restore system metrics aggregates
+            system_data = last_snapshot.get('system', {})
+            aggregates = system_data.get('aggregates', {})
+            
+            # Restore session start time based on monitoring hours
+            monitoring_hours = aggregates.get('overallMonitoringHours', 0)
+            if monitoring_hours > 0:
+                self.session_start = datetime.now() - timedelta(hours=monitoring_hours)
+            
+            logger.info(f"Successfully restored data for {len(self.app_tracking)} apps")
+            logger.info(f"Session start time: {self.session_start}")
+            
+        except Exception as e:
+            logger.error(f"Error loading existing data: {e}", exc_info=True)
+            logger.info("Starting with fresh tracking data")
+    
+    def get_friendly_app_name(self, process_name):
+        """Get friendly display name for an application"""
+        # Check if there's a mapped display name
+        if process_name in APP_DISPLAY_NAMES:
+            return APP_DISPLAY_NAMES[process_name]
+        
+        # Try case-insensitive match
+        for key, value in APP_DISPLAY_NAMES.items():
+            if key.lower() == process_name.lower():
+                return value
+        
+        # Remove .exe extension and return as-is
+        if process_name.lower().endswith('.exe'):
+            return process_name[:-4]
+        
+        return process_name
     
     def get_app_category(self, app_name):
         """Determine the category of an application"""
@@ -366,7 +497,8 @@ class ActivityTracker:
                 'taskmgr.exe', 'conhost.exe', 'rundll32.exe', 'wudfhost.exe',
                 'spoolsv.exe', 'lsaiso.exe', 'fontdrvhost.exe', 'dllhost.exe',
                 'runtimebroker.exe', 'sihost.exe', 'ctfmon.exe', 'taskhostw.exe',
-                'searchindexer.exe', 'searchprotocolhost.exe', 'winlogon.exe'
+                'searchindexer.exe', 'searchprotocolhost.exe', 'winlogon.exe',
+                'systemsettings.exe', 'webviewhost.exe'  # System UI processes
             }
             
             if name in excluded_processes:
@@ -446,12 +578,31 @@ class ActivityTracker:
             # If focus changed, record switch event
             if self.last_focused_app != foreground_process:
                 if self.last_focused_app and self.last_focus_start_time:
-                    # Save switch event for previous app
-                    self.app_tracking[self.last_focused_app]['focus_switches'].append({
+                    # Calculate total hours
+                    time_diff = now - self.last_focus_start_time
+                    total_hours = time_diff.total_seconds() / 3600
+                    
+                    # Get category for the app
+                    app_category = self.app_tracking[self.last_focused_app].get('category', 'Uncategorized')
+                    
+                    # Create focus switch entry
+                    focus_switch_entry = {
                         'from': self.last_focus_start_time.isoformat(),
                         'to': now.isoformat(),
-                        'window_title': self.last_window_title
-                    })
+                        'window_title': self.last_window_title,
+                        'totalHours': round(total_hours, 4)
+                    }
+                    
+                    # Extract course name if category is Browsers and contains "Udemy Business"
+                    if app_category == 'Browsers' and self.last_window_title and 'Udemy Business' in self.last_window_title:
+                        # Split by pipe symbol and get the part before it
+                        if '|' in self.last_window_title:
+                            course_name = self.last_window_title.split('|')[0].strip()
+                            focus_switch_entry['courseName'] = course_name
+                    
+                    # Save switch event for previous app
+                    self.app_tracking[self.last_focused_app]['focus_switches'].append(focus_switch_entry)
+                
                 # Start new focus event
                 self.last_focused_app = foreground_process
                 self.last_focus_start_time = now
@@ -605,7 +756,8 @@ class ActivityTracker:
         background_total_cpu = sum(app.get('cpuUsage', 0) for app in background_apps)
         background_total_memory = sum(app.get('memoryUsageMB', 0) for app in background_apps)
         
-        # Create aggregated background apps entry
+        # Create background apps summary (separate from active apps)
+        background_summary = None
         if background_apps:
             background_hourly_list = [
                 {
@@ -616,26 +768,22 @@ class ActivityTracker:
                 for hour, stats in sorted(background_hourly_stats.items())
             ]
             
-            aggregated_background = {
-                'name': 'background_apps',
-                'title': f'Other Background Apps ({len(background_apps)} apps)',
-                'category': 'Background',
-                'isFocused': False,
-                'runningTimeSec': background_total_run_seconds,
-                'focusDurationSec': background_total_focus_seconds,
-                'cpuUsage': round(background_total_cpu, 1),
-                'memoryUsageMB': round(background_total_memory, 1),
+            background_summary = {
+                'totalApps': len(background_apps),
+                'totalRunTimeSec': background_total_run_seconds,
+                'totalFocusDurationSec': background_total_focus_seconds,
+                'totalCpuUsage': round(background_total_cpu, 1),
+                'totalMemoryUsageMB': round(background_total_memory, 1),
                 'aggregates': {
                     'totalRunHours': round(background_total_run_seconds / 3600, 2),
                     'totalFocusHours': round(background_total_focus_seconds / 3600, 2)
                 },
-                'hourlyStats': background_hourly_list
+                'hourlyStats': background_hourly_list,
+                'apps': background_apps  # List of individual background apps
             }
-            
-            # Add aggregated background apps to the list
-            apps_snapshot = taskbar_apps + [aggregated_background]
-        else:
-            apps_snapshot = taskbar_apps
+        
+        # Active applications = only taskbar apps (no background_apps aggregated entry)
+        apps_snapshot = taskbar_apps
         
         # Track idle time (add idle seconds accumulated in this interval)
         if idle_time_to_add > 0:
@@ -696,6 +844,7 @@ class ActivityTracker:
                 }
             },
             'apps': apps_snapshot,
+            'backgroundApps': background_summary,  # Separate section for background apps
             'hourlySummary': hourly_summary_data
         }
         
