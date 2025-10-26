@@ -14,11 +14,13 @@ const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ACTIVITY_FILE = path.join(DATA_DIR, 'application_activity.json');
 const SUGGESTIONS_FILE = path.join(DATA_DIR, 'ai_suggestions.json');
+const UDEMY_DATA_DIR = path.join(DATA_DIR, 'udemy_activity');
 
 // Ensure data directory exists
 async function ensureDataDirectory() {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.mkdir(UDEMY_DATA_DIR, { recursive: true });
     console.log('📁 Data directory ready');
     
     // Initialize empty JSON files if they don't exist
@@ -105,7 +107,15 @@ app.get('/', (req, res) => {
       alerts: '/api/alerts',
       activity: '/api/activity',
       aiSuggestions: '/api/ai-suggestions',
-      healthMetrics: '/api/health'
+      healthMetrics: '/api/health',
+      learningProgress: '/api/learning-progress',
+      udemyTracker: {
+        health: '/api/udemy-tracker/health',
+        track: 'POST /api/udemy-tracker',
+        stats: '/api/udemy-tracker/stats',
+        files: '/api/udemy-tracker/files',
+        fileData: '/api/udemy-tracker/file/:filename'
+      }
     }
   });
 });
@@ -118,6 +128,245 @@ const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL
 const alertsRoutes = require('./routes/alerts');
 const healthMetricsRoutes = require('./routes/health-metrics-v2'); // Enhanced version with backend logic
 const localStorageRoutes = require('./routes/local-storage');
+const learningProgressRoutes = require('./routes/learning-progress');
+const categoriesRoutes = require('./routes/categories');
+const holidaysRoutes = require('./routes/holidays');
+
+// ========================================
+// Udemy Tracker Extension Endpoints
+// ========================================
+const os = require('os');
+
+// Get current username
+const USERNAME = os.userInfo().username.toUpperCase();
+
+// Get today's filename for Udemy tracker
+function getUdemyTodayFilename() {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  return `udemy_enhanced_${today}_${USERNAME}.jsonl`;
+}
+
+// Format log timestamp
+function getLogTimestamp() {
+  const now = new Date();
+  return now.toISOString().replace('T', ' ').substring(0, 19);
+}
+
+// Udemy Tracker: Health check endpoint
+app.get('/api/udemy-tracker/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'Udemy Progress Tracker - Integrated with Employee360',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    dataDirectory: UDEMY_DATA_DIR
+  });
+});
+
+// Udemy Tracker: Main tracking endpoint
+app.post('/api/udemy-tracker', async (req, res) => {
+  try {
+    const data = req.body;
+
+    // Validate required fields
+    if (!data || !data.courseId || !data.courseName) {
+      console.log(`❌ [${getLogTimestamp()}] Invalid Udemy data received - missing required fields`);
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: courseId, courseName'
+      });
+    }
+
+    // Log received data summary
+    const stats = data.stats || {};
+    console.log(`✅ [${getLogTimestamp()}] Udemy: ${data.courseName} - ${stats.totalSections || 0} sections, ${stats.totalLessons || 0} lessons, ${stats.completedLessons || 0} completed`);
+
+    // Prepare enhanced data structure
+    const enhancedData = {
+      timestamp: data.timestamp || new Date().toISOString(),
+      type: 'udemy_extension',
+      course: {
+        id: data.courseId,
+        name: data.courseName,
+        url: data.url || data.metadata?.pageUrl || '',
+        progress: data.progress || {
+          percentComplete: null,
+          completedLectures: null,
+          totalLectures: null,
+          rawText: null
+        },
+        metadata: {
+          instructor: data.metadata?.instructor || null,
+          rating: data.metadata?.rating || null,
+          lastUpdated: data.metadata?.lastUpdated || new Date().toISOString(),
+          userAgent: data.metadata?.userAgent || req.headers['user-agent'],
+          pageUrl: data.metadata?.pageUrl || data.url || ''
+        }
+      },
+      sections: data.sections || [],
+      currentLesson: data.currentLesson || null,
+      stats: {
+        totalSections: stats.totalSections || 0,
+        totalLessons: stats.totalLessons || 0,
+        completedLessons: stats.completedLessons || 0
+      },
+      captureMethod: 'browser_extension'
+    };
+
+    // Write to JSONL file (one JSON object per line)
+    const filename = getUdemyTodayFilename();
+    const filepath = path.join(UDEMY_DATA_DIR, filename);
+    const jsonLine = JSON.stringify(enhancedData) + '\n';
+
+    await fs.appendFile(filepath, jsonLine, 'utf8');
+    console.log(`💾 [${getLogTimestamp()}] Udemy data saved to: ${filename}`);
+
+    // Return success response
+    res.json({
+      success: true,
+      message: 'Data received and saved successfully',
+      course: data.courseName,
+      stats: enhancedData.stats,
+      filename: filename,
+      timestamp: enhancedData.timestamp
+    });
+
+  } catch (error) {
+    console.error(`❌ [${getLogTimestamp()}] Error processing Udemy request:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Udemy Tracker: Get statistics endpoint
+app.get('/api/udemy-tracker/stats', async (req, res) => {
+  try {
+    const filename = getUdemyTodayFilename();
+    const filepath = path.join(UDEMY_DATA_DIR, filename);
+
+    try {
+      await fs.access(filepath);
+    } catch {
+      return res.json({
+        entries: 0,
+        courses: [],
+        file: filename,
+        message: 'No data captured today'
+      });
+    }
+
+    // Read JSONL file
+    const fileContent = await fs.readFile(filepath, 'utf8');
+    const lines = fileContent.trim().split('\n').filter(line => line.trim());
+    const entries = lines.map(line => JSON.parse(line));
+
+    // Aggregate by course
+    const courseMap = new Map();
+    entries.forEach(entry => {
+      const courseId = entry.course?.id;
+      if (courseId) {
+        courseMap.set(courseId, {
+          id: courseId,
+          name: entry.course?.name,
+          lastUpdate: entry.timestamp,
+          stats: entry.stats,
+          url: entry.course?.url
+        });
+      }
+    });
+
+    res.json({
+      entries: entries.length,
+      courses: Array.from(courseMap.values()),
+      file: filename,
+      lastEntry: entries[entries.length - 1]?.timestamp
+    });
+
+  } catch (error) {
+    console.error(`❌ [${getLogTimestamp()}] Error getting Udemy stats:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Udemy Tracker: List all data files
+app.get('/api/udemy-tracker/files', async (req, res) => {
+  try {
+    const dirFiles = await fs.readdir(UDEMY_DATA_DIR);
+    const files = await Promise.all(
+      dirFiles
+        .filter(file => file.endsWith('.jsonl'))
+        .map(async (file) => {
+          const filepath = path.join(UDEMY_DATA_DIR, file);
+          const stats = await fs.stat(filepath);
+          return {
+            filename: file,
+            size: stats.size,
+            modified: stats.mtime,
+            created: stats.birthtime
+          };
+        })
+    );
+
+    files.sort((a, b) => b.modified - a.modified);
+
+    res.json({
+      count: files.length,
+      files: files,
+      directory: UDEMY_DATA_DIR
+    });
+
+  } catch (error) {
+    console.error(`❌ [${getLogTimestamp()}] Error listing Udemy files:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Udemy Tracker: Get specific file data
+app.get('/api/udemy-tracker/file/:filename', async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filepath = path.join(UDEMY_DATA_DIR, filename);
+
+    try {
+      await fs.access(filepath);
+    } catch {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    const fileContent = await fs.readFile(filepath, 'utf8');
+    const lines = fileContent.trim().split('\n').filter(line => line.trim());
+    const entries = lines.map(line => JSON.parse(line));
+
+    res.json({
+      filename: filename,
+      entries: entries.length,
+      data: entries
+    });
+
+  } catch (error) {
+    console.error(`❌ [${getLogTimestamp()}] Error reading Udemy file:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// End of Udemy Tracker Endpoints
+// ========================================
+
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -127,6 +376,9 @@ app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/health', healthMetricsRoutes);
 app.use('/api/local-storage', localStorageRoutes);
+app.use('/api/learning-progress', learningProgressRoutes);
+app.use('/api', categoriesRoutes);
+app.use('/api/holidays', holidaysRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -154,6 +406,7 @@ async function startServer() {
       console.log(`⚡ Server started in ${bootTime}ms`);
       console.log(`📊 Dashboard available at http://localhost:3000`);
       console.log(`💾 Storage: Local JSON Files in ${DATA_DIR}`);
+      console.log(`🎓 Udemy Tracker: Data stored in ${UDEMY_DATA_DIR}`);
       console.log(`🔍 API docs available at http://127.0.0.1:${PORT}/health`);
       console.log(`💾 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     });

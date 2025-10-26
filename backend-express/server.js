@@ -84,6 +84,7 @@ const appRoutes = require('./routes/applications');
 const aiSuggestionsRoutes = require('./routes/ai-suggestions');
 const activityLocalRoutes = require('./routes/activity-local');
 const alertsRoutes = require('./routes/alerts');
+const categoriesRoutes = require('./routes/categories');
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -91,6 +92,7 @@ app.use('/api/apps', appRoutes);
 app.use('/api/ai-suggestions', aiSuggestionsRoutes);
 app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api', categoriesRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

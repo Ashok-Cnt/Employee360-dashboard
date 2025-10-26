@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Udemy Progress Tracker",
+  "version": "1.0.0",
+  "description": "Tracks Udemy course progress with section and lesson details for Employee360 Dashboard",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.udemy.com/*",
+    "http://localhost:8001/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.udemy.com/course/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

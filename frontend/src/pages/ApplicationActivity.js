@@ -567,11 +567,7 @@ const ApplicationActivity = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange]);
 
-  useEffect(() => {
-    const interval = setInterval(fetchAllData, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange]);
+  // Auto-refresh disabled
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);

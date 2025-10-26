@@ -36,7 +36,7 @@ APP_CATEGORIES = {
         'Visual Studio', 'Eclipse', 'NetBeans', 'Android Studio', 'SQL Developer', 'Sqldeveloper64w',
         'Oracle SQL Developer', 'DBeaver', 'DataGrip', 'Bruno', 'Insomnia',
         'Microsoft OneNote', 'OneNote', 'ONENOTEM', 'Evernote', 'Notion', 'Obsidian', 'Notepad',
-        'Git', 'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
+        'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
         'WinSCP', 'PuTTY', 'mPuTTY', 'KiTTY', 'MobaXterm', 'SecureCRT'
     ],
     'Communication': [
@@ -490,7 +490,7 @@ class ActivityTracker:
         try:
             name = info['name'].lower()
             
-            # Exclude obvious system processes
+            # Exclude obvious system processes and background development tools
             excluded_processes = {
                 'system', 'registry', 'smss.exe', 'csrss.exe', 'wininit.exe',
                 'services.exe', 'lsass.exe', 'svchost.exe', 'dwm.exe',
@@ -498,7 +498,12 @@ class ActivityTracker:
                 'spoolsv.exe', 'lsaiso.exe', 'fontdrvhost.exe', 'dllhost.exe',
                 'runtimebroker.exe', 'sihost.exe', 'ctfmon.exe', 'taskhostw.exe',
                 'searchindexer.exe', 'searchprotocolhost.exe', 'winlogon.exe',
-                'systemsettings.exe', 'webviewhost.exe'  # System UI processes
+                'systemsettings.exe', 'webviewhost.exe',  # System UI processes
+                # Background development tools
+                'git.exe', 'git-credential-manager.exe', 'ssh.exe', 'ssh-agent.exe',
+                'node.exe', 'python.exe', 'pythonw.exe',  # Backend processes
+                'java.exe', 'javaw.exe',  # Java processes
+                'powershell.exe', 'cmd.exe',  # Command line tools (running in background)
             }
             
             if name in excluded_processes:

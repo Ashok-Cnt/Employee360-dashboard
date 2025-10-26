@@ -1,0 +1,55 @@
+{
+  "categories": [
+    {
+      "id": "productivity",
+      "name": "Productivity",
+      "icon": "Work",
+      "color": "#4caf50",
+      "applications": [
+        "IntelliJ IDEA",
+        "Eclipse",
+        "PyCharm",
+        "Sublime Text",
+        "Notepad++",
+        "Microsoft Excel",
+        "Microsoft Word",
+        "Microsoft PowerPoint",
+        "Google Chrome",
+        "Firefox",
+        "Notepad"
+      ]
+    },
+    {
+      "id": "communication",
+      "name": "Communication",
+      "icon": "People",
+      "color": "#2196f3",
+      "applications": [
+        "Microsoft Teams",
+        "Slack",
+        "Discord",
+        "Zoom",
+        "Skype",
+        "Microsoft Outlook",
+        "Gmail",
+        "Thunderbird"
+      ]
+    },
+    {
+      "id": "break",
+      "name": "Break",
+      "icon": "Coffee",
+      "color": "#ff9800",
+      "applications": [
+        "YouTube",
+        "Netflix",
+        "Spotify",
+        "VLC Media Player",
+        "Windows Media Player",
+        "Steam",
+        "Epic Games Launcher"
+      ]
+    }
+  ],
+  "last_updated": "2025-10-25T11:08:19.830Z"
+}

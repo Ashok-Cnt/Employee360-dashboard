@@ -79,6 +79,7 @@ const WorkPatterns = () => {
   const [activityData, setActivityData] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [categories, setCategories] = React.useState([]);
   // Date filter state
   const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -132,6 +133,9 @@ const WorkPatterns = () => {
   const [selectedCardApp, setSelectedCardApp] = React.useState(null);
   const [selectedCardProject, setSelectedCardProject] = React.useState(null);
   const [navigationHistory, setNavigationHistory] = React.useState([]);
+  // Timeline dialog state
+  const [timelineDialogOpen, setTimelineDialogOpen] = React.useState(false);
+  const [selectedModuleTimeline, setSelectedModuleTimeline] = React.useState(null);
   // Hybrid view preferences for Work Pattern chart
   const [viewStyle, setViewStyle] = React.useState('card-stack'); // 'breadcrumbs', 'tree', 'split', 'accordion', 'stepper', 'card-stack'
   const [hybridDialogOpen, setHybridDialogOpen] = React.useState(false);
@@ -233,9 +237,37 @@ const WorkPatterns = () => {
         console.error('Error fetching available dates:', err);
       }
     };
+
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:8001/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories || []);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
     
     fetchAvailableDates();
+    fetchCategories();
   }, []);
+
+  // Helper function to recategorize apps based on current category configuration
+  const recategorizeApp = React.useCallback((appName) => {
+    if (!categories || categories.length === 0) {
+      return 'Uncategorized';
+    }
+    
+    for (const category of categories) {
+      if (category.applications && category.applications.includes(appName)) {
+        return category.name;
+      }
+    }
+    
+    return 'Uncategorized';
+  }, [categories]);
 
   // Fetch and aggregate data for multiple days
   const fetchRangeData = React.useCallback(async (startDate, endDate) => {
@@ -285,7 +317,7 @@ const WorkPatterns = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [recategorizeApp]);
 
   // Aggregate data from multiple days
   const aggregateMultipleDays = (daysData) => {
@@ -338,7 +370,7 @@ const WorkPatterns = () => {
             appMap.set(key, {
               name: app.name,
               title: app.title,
-              category: app.category,
+              category: recategorizeApp(app.name || app.title),  // Use dynamic categorization
               focusDurationSec: 0,
               runningTimeSec: 0,
               aggregates: {
@@ -447,14 +479,7 @@ const WorkPatterns = () => {
       fetchRangeData(range.start, range.end);
     }
     
-    // Only auto-refresh if viewing today's data in daily mode
-    const today = new Date().toISOString().split('T')[0];
-    const isToday = selectedDate === today && dateFilterMode === 'daily';
-    
-    if (isToday) {
-      const interval = setInterval(() => fetchData(selectedDate), 60000);
-      return () => clearInterval(interval);
-    }
+    // Auto-refresh disabled
   }, [fetchData, fetchRangeData, selectedDate, selectedWeek, selectedMonth, dateFilterMode]);
 
   // Format memory usage
@@ -469,22 +494,69 @@ const WorkPatterns = () => {
   const parseWindowTitle = (windowTitle) => {
     if (!windowTitle) return { module: null, project: null };
     
-    // Pattern for Microsoft Teams: "Chat | PersonName | Microsoft Teams"
-    // Example: "Chat | M Tharmaraj | Microsoft Teams"
-    if (windowTitle.includes('Microsoft Teams')) {
-      const teamsParts = windowTitle.split('|').map(p => p.trim());
+    // Clean browser window titles - remove "and X more pages" suffix
+    // Example: "Employee360 and 4 more pages" → "Employee360"
+    // This applies to Microsoft Edge, Chrome, Firefox, etc.
+    let cleanedTitle = windowTitle.replace(/\s+and\s+\d+\s+more\s+pages?$/i, '').trim();
+    
+    // Skip window titles with file paths (containing C:\ or full paths in parentheses)
+    // Example to skip: "XMLUtil.java (C:\\Users\\Gbs05262\\eclipse-workspace\\...)"
+    // Example to keep: "Branch_6360809_SwiftCommission – XMLUtil.java"
+    if (cleanedTitle.includes('C:\\') || /\([A-Z]:\\.+\)/.test(cleanedTitle)) {
+      return { module: null, project: null, skip: true };
+    }
+    
+    // Pattern for Microsoft Teams
+    if (cleanedTitle.includes('Microsoft Teams')) {
+      const teamsParts = cleanedTitle.split('|').map(p => p.trim());
+      
+      // Chat pattern: "Chat | PersonName | Microsoft Teams"
+      // Example: "Chat | G Pirabu | Microsoft Teams"
+      if (teamsParts.length >= 3 && teamsParts[0].toLowerCase() === 'chat') {
+        return {
+          module: 'Chat',  // Type: Chat
+          project: teamsParts[1].trim(),  // Person name (e.g., "G Pirabu")
+          application: 'Microsoft Teams',
+          type: 'Chat'
+        };
+      }
+      
+      // Call/Meeting pattern: "MeetingName | Microsoft Teams"
+      // Example: "Daily standup | Microsoft Teams"
+      if (teamsParts.length >= 2 && teamsParts[0].toLowerCase() !== 'chat') {
+        return {
+          module: 'Call',  // Type: Call
+          project: teamsParts[0].trim(),  // Meeting/Call name (e.g., "Daily standup")
+          application: 'Microsoft Teams',
+          type: 'Call'
+        };
+      }
+      
+      // Fallback for other Teams patterns
       if (teamsParts.length >= 2) {
         return {
-          module: teamsParts[0].trim(),  // "Chat" (or "Call" in future)
-          project: teamsParts[1].trim(),  // "M Tharmaraj" (Person name)
+          module: teamsParts[0].trim(),
+          project: teamsParts[1].trim(),
           application: 'Microsoft Teams'
         };
       }
     }
     
-    // Try different patterns
-    // Pattern 1: "file - project - application" (e.g., "ApplicationActivity.js - Employee360-dashboard - Visual Studio Code")
-    const pattern1 = windowTitle.split(' - ');
+    // Pattern 1: En-dash format (preferred): "Branch_6360809_SwiftCommission – XMLUtil.java"
+    // This uses en-dash (–) or unicode \u2013
+    if (cleanedTitle.includes('–') || cleanedTitle.includes('\u2013')) {
+      const parts = cleanedTitle.split(/–|\u2013/);
+      if (parts.length >= 2) {
+        return {
+          module: parts[1].trim(),  // File name (e.g., "XMLUtil.java")
+          project: parts[0].trim(),  // Project name (e.g., "Branch_6360809_SwiftCommission")
+          application: null
+        };
+      }
+    }
+    
+    // Pattern 2: "file - project - application" (e.g., "ApplicationActivity.js - Employee360-dashboard - Visual Studio Code")
+    const pattern1 = cleanedTitle.split(' - ');
     if (pattern1.length >= 3) {
       return {
         module: pattern1[0].trim(),
@@ -493,7 +565,7 @@ const WorkPatterns = () => {
       };
     }
     
-    // Pattern 2: "file - application" (e.g., "new 342 - Notepad++")
+    // Pattern 3: "file - application" (e.g., "new 342 - Notepad++")
     if (pattern1.length === 2) {
       return {
         module: pattern1[0].trim(),
@@ -502,19 +574,9 @@ const WorkPatterns = () => {
       };
     }
     
-    // Pattern 3: Try backslash separator (e.g., "Branch_6360809_SwiftCommission – SwiftCommissionBatchContabile.java")
-    const pattern3 = windowTitle.split(/\\|–|\u2013/);  // backslash or en-dash
-    if (pattern3.length >= 2) {
-      return {
-        module: pattern3[pattern3.length - 1].trim(),
-        project: pattern3[0].trim(),
-        application: null
-      };
-    }
-    
     // Default: treat whole title as module
     return {
-      module: windowTitle.trim(),
+      module: cleanedTitle.trim(),
       project: null,
       application: null
     };
@@ -526,6 +588,12 @@ const WorkPatterns = () => {
     
     focusSwitches.forEach(sw => {
       const parsed = parseWindowTitle(sw.window_title);
+      
+      // Skip only window titles with file paths (explicitly marked with skip flag)
+      if (parsed.skip) {
+        return;
+      }
+      
       const projectName = parsed.project || 'No Project';
       const moduleName = parsed.module || 'Unknown';
       
@@ -548,12 +616,14 @@ const WorkPatterns = () => {
         projects[projectName].modules[moduleName] = {
           name: moduleName,
           time: 0,
-          switchCount: 0
+          switchCount: 0,
+          focusSwitches: []  // Store raw focus switches for timeline
         };
       }
       
       projects[projectName].modules[moduleName].time += duration;
       projects[projectName].modules[moduleName].switchCount += 1;
+      projects[projectName].modules[moduleName].focusSwitches.push(sw);  // Add focus switch to timeline
     });
     
     return Object.values(projects).map(project => ({
@@ -1033,7 +1103,7 @@ const WorkPatterns = () => {
           };
         })
         .filter(app => app.projects.length > 0)
-        .sort((a, b) => b.focusTime - a.ficusTime);
+        .sort((a, b) => b.focusTime - a.focusTime);
       
       setAccordionData({
         category: clickedLabel,
@@ -1200,6 +1270,11 @@ const WorkPatterns = () => {
     setNavigationHistory([...navigationHistory, { level: 'projects', app: selectedCardApp }]);
     setSelectedCardProject(project);
     setCardStackLevel('modules');
+  };
+
+  const handleModuleClick = (module) => {
+    setSelectedModuleTimeline(module);
+    setTimelineDialogOpen(true);
   };
 
   const handleCardBack = () => {
@@ -1581,14 +1656,6 @@ const WorkPatterns = () => {
                     color={selectedDate === new Date().toISOString().split('T')[0] ? "success" : "default"}
                     size="small"
                   />
-                  {selectedDate === new Date().toISOString().split('T')[0] && (
-                    <Chip 
-                      label="Auto-refresh: 1 min"
-                      color="info"
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
                 </Box>
               </Grid>
             </>
@@ -1673,7 +1740,7 @@ const WorkPatterns = () => {
       <Grid container spacing={2}>
         {/* Work Pattern Analysis - Time Distribution */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom>
               Work Pattern Analysis - Time Distribution
             </Typography>
@@ -1690,32 +1757,35 @@ const WorkPatterns = () => {
                 View Style: {viewStyle === 'card-stack' ? 'Cards' : viewStyle === 'breadcrumbs' ? 'Breadcrumbs' : viewStyle === 'tree' ? 'Tree' : viewStyle === 'split' ? 'Split' : viewStyle === 'accordion' ? 'Accordion' : 'Stepper'}
               </Button>
             </Box>
-            <Bar data={getWorkPatternData()} options={{
-              ...chartOptions,
-              onClick: (event, elements) => handleHybridClick(event, elements),
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Time Spent (minutes)'
+            <Box sx={{ flex: 1, minHeight: 180, display: 'flex', alignItems: 'center' }}>
+              <Bar data={getWorkPatternData()} options={{
+                ...chartOptions,
+                onClick: (event, elements) => handleHybridClick(event, elements),
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Time Spent (minutes)'
+                    }
                   }
-                }
-              },
-              plugins: {
-                ...chartOptions.plugins,
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      const minutes = context.parsed.y;
-                      const hours = Math.floor(minutes / 60);
-                      const mins = Math.round(minutes % 60);
-                      return `${context.dataset.label}: ${hours}h ${mins}m`;
+                },
+                plugins: {
+                  ...chartOptions.plugins,
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const minutes = context.parsed.y;
+                        const hours = Math.floor(minutes / 60);
+                        const mins = Math.round(minutes % 60);
+                        return `${context.dataset.label}: ${hours}h ${mins}m`;
+                      }
                     }
                   }
                 }
-              }
-            }} />
+              }} />
+            </Box>
           </Paper>
         </Grid>
 
@@ -1796,7 +1866,7 @@ const WorkPatterns = () => {
                 View Style: {timeDistViewStyle === 'card-stack' ? 'Cards' : timeDistViewStyle === 'breadcrumbs' ? 'Breadcrumbs' : timeDistViewStyle === 'tree' ? 'Tree' : timeDistViewStyle === 'split' ? 'Split' : timeDistViewStyle === 'accordion' ? 'Accordion' : 'Stepper'}
               </Button>
             </Box>
-            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 350 }}>
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
               <Doughnut 
                 data={getOverallTimeDistributionData()} 
                 options={{
@@ -1849,7 +1919,7 @@ const WorkPatterns = () => {
               gridTemplateColumns: 'repeat(12, 1fr)', 
               gap: 0.5,
               mt: 2,
-              minHeight: 350,
+              minHeight: 180,
               alignContent: 'center'
             }}>
               {getFocusIntensityHeatmapData().map((hourData, index) => (
@@ -2364,12 +2434,15 @@ const WorkPatterns = () => {
                           sx={{ 
                             bgcolor: '#f1f8e9',
                             border: '2px solid #2e7d32',
+                            cursor: 'pointer',
                             transition: 'all 0.3s ease',
                             '&:hover': {
                               transform: 'translateX(10px)',
-                              boxShadow: 4
+                              boxShadow: 4,
+                              bgcolor: '#e8f5e9'
                             }
                           }}
+                          onClick={() => handleModuleClick(module)}
                         >
                           <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2377,7 +2450,7 @@ const WorkPatterns = () => {
                               <Box sx={{ flexGrow: 1 }}>
                                 <Typography variant="h6">{module.name}</Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  Module / File
+                                  Module / File • Click to view timeline
                                 </Typography>
                               </Box>
                             </Box>
@@ -3711,6 +3784,116 @@ const WorkPatterns = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHeatmapDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Timeline Dialog - Shows Focus Switches Timeline for a Module */}
+      <Dialog 
+        open={timelineDialogOpen} 
+        onClose={() => setTimelineDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <InsertDriveFileIcon color="primary" />
+            <Box>
+              <Typography variant="h6">
+                {selectedModuleTimeline?.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Focus Switches Timeline
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 3 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#e3f2fd' }}>
+                  <Typography variant="caption" color="text.secondary">Total Time</Typography>
+                  <Typography variant="h5" color="primary">
+                    {selectedModuleTimeline ? Math.round(selectedModuleTimeline.time / 60) : 0} min
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={4}>
+                <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#f3e5f5' }}>
+                  <Typography variant="caption" color="text.secondary">Focus Switches</Typography>
+                  <Typography variant="h5" color="secondary">
+                    {selectedModuleTimeline?.switchCount || 0}
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={4}>
+                <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#e8f5e9' }}>
+                  <Typography variant="caption" color="text.secondary">Avg Duration</Typography>
+                  <Typography variant="h5" color="success.main">
+                    {selectedModuleTimeline ? Math.round(selectedModuleTimeline.time / selectedModuleTimeline.switchCount) : 0}s
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            ⏱️ Timeline of Activity
+          </Typography>
+
+          {selectedModuleTimeline?.focusSwitches && selectedModuleTimeline.focusSwitches.length > 0 ? (
+            <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+              {selectedModuleTimeline.focusSwitches
+                .sort((a, b) => new Date(a.from) - new Date(b.from))
+                .map((fs, index) => {
+                  const from = new Date(fs.from);
+                  const to = new Date(fs.to);
+                  const duration = Math.round((to - from) / 1000);
+                  
+                  return (
+                    <Card key={index} sx={{ mb: 2, bgcolor: index % 2 === 0 ? '#fafafa' : '#ffffff' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="subtitle2" color="primary">
+                            Session {index + 1}
+                          </Typography>
+                          <Chip 
+                            label={`${duration}s`} 
+                            size="small" 
+                            color="success"
+                          />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            🕐 From: <strong>{from.toLocaleTimeString()}</strong>
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            →
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            🕐 To: <strong>{to.toLocaleTimeString()}</strong>
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                          Window: {fs.window_title}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" align="center">
+              No focus switches data available
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTimelineDialogOpen(false)} color="primary">
             Close
           </Button>
         </DialogActions>

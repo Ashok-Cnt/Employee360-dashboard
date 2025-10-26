@@ -40,6 +40,7 @@ import {
   Battery20,
   BatteryAlert,
   Refresh as RefreshIcon,
+  Event as EventIcon,
 } from '@mui/icons-material';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
@@ -82,6 +83,7 @@ const Dashboard = () => {
   const [activityData, setActivityData] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [holidays, setHolidays] = React.useState([]);
   const [activeAppsDialogOpen, setActiveAppsDialogOpen] = React.useState(false);
   const [productiveHoursDialogOpen, setProductiveHoursDialogOpen] = React.useState(false);
   const [productivityScoreDialogOpen, setProductivityScoreDialogOpen] = React.useState(false);
@@ -90,6 +92,7 @@ const Dashboard = () => {
   const [idleHoursDialogOpen, setIdleHoursDialogOpen] = React.useState(false);
   const [coursesDialogOpen, setCoursesDialogOpen] = React.useState(false);
   const [batteryDialogOpen, setBatteryDialogOpen] = React.useState(false);
+  const [holidaysDialogOpen, setHolidaysDialogOpen] = React.useState(false);
   
   // Get system user (Windows login user) from Redux store
   const systemUser = useSelector((state) => state.user.systemUser);
@@ -120,18 +123,32 @@ const Dashboard = () => {
     }
   }, []);
 
+  // Fetch upcoming holidays
+  const fetchHolidays = React.useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:8001/api/holidays/upcoming?limit=5');
+      if (response.ok) {
+        const data = await response.json();
+        setHolidays(data.holidays || []);
+      }
+    } catch (err) {
+      console.error('Error fetching holidays:', err);
+    }
+  }, []);
+
   // Fetch application activity data and system user on mount
   useEffect(() => {
     // Fetch system user information
     dispatch(fetchSystemUser());
     
     fetchData();
+    fetchHolidays();
     
-    // Set up periodic refresh every minute
-    const interval = setInterval(fetchData, 60000);
+    // Set up periodic refresh every 30 seconds for Dashboard
+    const interval = setInterval(fetchData, 30000);
     
     return () => clearInterval(interval);
-  }, [dispatch, fetchData]);
+  }, [dispatch, fetchData, fetchHolidays]);
   
   // Get greeting message with Windows system username
   const getGreeting = () => {
@@ -453,6 +470,60 @@ const Dashboard = () => {
             );
           }
         })()}
+        
+        {/* Upcoming Holidays Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              height: '100%',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 4
+              }
+            }}
+            onClick={() => setHolidaysDialogOpen(true)}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ color: '#9c27b0', mr: 1 }}>
+                  <EventIcon />
+                </Box>
+                <Typography variant="h6" component="h2">
+                  Next Holiday
+                </Typography>
+              </Box>
+              {holidays.length > 0 ? (
+                <>
+                  <Typography 
+                    variant="h5" 
+                    component="div" 
+                    sx={{ color: '#9c27b0', fontWeight: 'bold', mb: 1 }}
+                  >
+                    {holidays[0].name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {new Date(holidays[0].date).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </Typography>
+                  <Chip 
+                    label={holidays[0].type} 
+                    size="small" 
+                    sx={{ mt: 1, textTransform: 'capitalize' }}
+                  />
+                </>
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  No upcoming holidays
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* AI Suggestions and Activity Feed */}
@@ -1976,6 +2047,74 @@ const Dashboard = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBatteryDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upcoming Holidays Dialog */}
+      <Dialog 
+        open={holidaysDialogOpen} 
+        onClose={() => setHolidaysDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EventIcon sx={{ mr: 1, color: '#9c27b0' }} />
+            Upcoming Holidays
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {holidays.length > 0 ? (
+            <List>
+              {holidays.map((holiday, index) => (
+                <React.Fragment key={holiday.id}>
+                  {index > 0 && <Divider />}
+                  <ListItem>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Typography variant="h6" sx={{ color: '#9c27b0' }}>
+                            {holiday.name}
+                          </Typography>
+                          <Chip 
+                            label={holiday.type} 
+                            size="small" 
+                            sx={{ textTransform: 'capitalize' }}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="body2" color="textSecondary">
+                            📅 {new Date(holiday.date).toLocaleDateString('en-US', { 
+                              weekday: 'long',
+                              month: 'long', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </Typography>
+                          {holiday.description && (
+                            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+                              {holiday.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body1" color="textSecondary" align="center" sx={{ py: 3 }}>
+              No upcoming holidays found
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHolidaysDialogOpen(false)} color="primary">
             Close
           </Button>
         </DialogActions>

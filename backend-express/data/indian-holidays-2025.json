@@ -1,0 +1,76 @@
+{
+  "country": "IN",
+  "year": 2025,
+  "holidays": [
+    {
+      "date": "2025-01-14",
+      "localName": "Pongal",
+      "name": "Pongal",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-04-14",
+      "localName": "Tamizh Puthandu",
+      "name": "Tamizh Puthandu",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-05-01",
+      "localName": "May Day",
+      "name": "May Day",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-06-07",
+      "localName": "Bakrid (Eid-Al-Adha)",
+      "name": "Bakrid (Eid-Al-Adha)",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-08-15",
+      "localName": "Independence Day",
+      "name": "Independence Day",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-08-27",
+      "localName": "Ganesh Chaturthi",
+      "name": "Ganesh Chaturthi",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-10-01",
+      "localName": "Ayudha Pooja",
+      "name": "Ayudha Pooja",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-10-02",
+      "localName": "Gandhi Jayanthi",
+      "name": "Gandhi Jayanthi",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-10-20",
+      "localName": "Diwali",
+      "name": "Diwali",
+      "types": ["Public"],
+      "global": true
+    },
+    {
+      "date": "2025-12-25",
+      "localName": "Christmas",
+      "name": "Christmas",
+      "types": ["Public"],
+      "global": true
+    }
+  ]
+}

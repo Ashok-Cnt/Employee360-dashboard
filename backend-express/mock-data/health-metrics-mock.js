@@ -110,3 +110,5 @@ module.exports = {
   mockDevices,
   mockGoogleFitAccounts
 };
+
+
