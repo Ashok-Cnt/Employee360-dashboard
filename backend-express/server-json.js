@@ -78,10 +78,44 @@ app.locals.files = {
 // Middleware
 app.use(helmet());
 app.use(morgan('combined'));
+
+// CORS configuration - allow Udemy domains and local origins
 app.use(cors({
-  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(','),
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:8001',
+      'http://127.0.0.1:8001'
+    ];
+    
+    // Also allow all Udemy domains
+    if (origin.includes('udemy.com')) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    // Check environment variable for additional origins
+    const envOrigins = process.env.ALLOWED_ORIGINS;
+    if (envOrigins && envOrigins.split(',').indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    return callback(null, true); // Allow all for development
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
