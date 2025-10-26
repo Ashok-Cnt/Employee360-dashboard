@@ -165,6 +165,7 @@ const localStorageRoutes = require('./routes/local-storage');
 const learningProgressRoutes = require('./routes/learning-progress');
 const categoriesRoutes = require('./routes/categories');
 const holidaysRoutes = require('./routes/holidays');
+const udemyCoursesRoutes = require('./routes/udemy-courses'); // New Udemy course details
 
 // ========================================
 // Udemy Tracker Extension Endpoints
@@ -411,6 +412,7 @@ app.use('/api/alerts', alertsRoutes);
 app.use('/api/health', healthMetricsRoutes);
 app.use('/api/local-storage', localStorageRoutes);
 app.use('/api/learning-progress', learningProgressRoutes);
+app.use('/api/udemy-courses', udemyCoursesRoutes); // New Udemy course details
 app.use('/api', categoriesRoutes);
 app.use('/api/holidays', holidaysRoutes);
 
