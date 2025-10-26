@@ -41,6 +41,7 @@ import {
   BatteryAlert,
   Refresh as RefreshIcon,
   Event as EventIcon,
+  BeachAccess as LeaveIcon,
 } from '@mui/icons-material';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
@@ -93,6 +94,9 @@ const Dashboard = () => {
   const [coursesDialogOpen, setCoursesDialogOpen] = React.useState(false);
   const [batteryDialogOpen, setBatteryDialogOpen] = React.useState(false);
   const [holidaysDialogOpen, setHolidaysDialogOpen] = React.useState(false);
+  const [leaveDaysDialogOpen, setLeaveDaysDialogOpen] = React.useState(false);
+  const [leaveDaysData, setLeaveDaysData] = React.useState([]);
+  const [leaveDaysLoading, setLeaveDaysLoading] = React.useState(false);
   
   // Get system user (Windows login user) from Redux store
   const systemUser = useSelector((state) => state.user.systemUser);
@@ -233,6 +237,82 @@ const Dashboard = () => {
   // Get idle hours
   const getIdleHours = () => {
     return activityData?.system?.aggregates?.idleHours || 0;
+  };
+
+  // Fetch leave days data
+  const fetchLeaveDays = React.useCallback(async () => {
+    setLeaveDaysLoading(true);
+    try {
+      // Fetch available dates
+      const datesResponse = await fetch('/api/activity/available-dates');
+      if (!datesResponse.ok) {
+        throw new Error('Failed to fetch available dates');
+      }
+      const datesData = await datesResponse.json();
+      const dates = datesData.dates || [];
+      
+      // Fetch data for each date and check if it's a leave day
+      const leaveDays = [];
+      for (const date of dates) {
+        try {
+          const response = await fetch(`/api/activity/daily-summary/${date}`);
+          if (response.ok) {
+            const data = await response.json();
+            const runningHours = data.system?.aggregates?.overallMonitoringHours || 0;
+            
+            // Check if it's a leave day (< 3 hours and > 0)
+            if (runningHours > 0 && runningHours < 3) {
+              leaveDays.push({
+                date,
+                runningHours,
+                month: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                monthKey: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: '2-digit' }),
+                dayOfWeek: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
+                formattedDate: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })
+              });
+            }
+          }
+        } catch (err) {
+          console.warn(`Error fetching data for ${date}:`, err);
+        }
+      }
+      
+      setLeaveDaysData(leaveDays);
+    } catch (err) {
+      console.error('Error fetching leave days:', err);
+      setLeaveDaysData([]);
+    } finally {
+      setLeaveDaysLoading(false);
+    }
+  }, []);
+
+  // Get leave days count
+  const getLeaveDaysCount = () => {
+    return leaveDaysData.length;
+  };
+
+  // Get leave days grouped by month
+  const getLeaveDaysByMonth = () => {
+    const grouped = {};
+    leaveDaysData.forEach(day => {
+      if (!grouped[day.monthKey]) {
+        grouped[day.monthKey] = {
+          month: day.month,
+          days: []
+        };
+      }
+      grouped[day.monthKey].days.push(day);
+    });
+    
+    // Sort by month (newest first) and return array
+    return Object.keys(grouped)
+      .sort((a, b) => b.localeCompare(a))
+      .map(key => grouped[key]);
   };
 
   // Get battery information
@@ -402,6 +482,20 @@ const Dashboard = () => {
             icon={<Coffee />}
             color="#ff9800"
             onClick={() => setIdleHoursDialogOpen(true)}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            title="Leave Days"
+            value={leaveDaysLoading ? '...' : getLeaveDaysCount()}
+            icon={<LeaveIcon />}
+            color="#9c27b0"
+            onClick={() => {
+              if (!leaveDaysLoading && leaveDaysData.length === 0) {
+                fetchLeaveDays();
+              }
+              setLeaveDaysDialogOpen(true);
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -2115,6 +2209,119 @@ const Dashboard = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHolidaysDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Leave Days Dialog */}
+      <Dialog 
+        open={leaveDaysDialogOpen} 
+        onClose={() => setLeaveDaysDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <LeaveIcon sx={{ mr: 1, color: '#9c27b0' }} />
+              Leave Days (Less than 3 hours)
+            </Box>
+            <Button 
+              variant="outlined" 
+              size="small"
+              onClick={fetchLeaveDays}
+              disabled={leaveDaysLoading}
+              startIcon={leaveDaysLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
+            >
+              {leaveDaysLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {leaveDaysLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                Analyzing activity data...
+              </Typography>
+            </Box>
+          ) : leaveDaysData.length > 0 ? (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <strong>{getLeaveDaysCount()} day(s)</strong> detected with running time less than 3 hours
+              </Alert>
+              
+              {getLeaveDaysByMonth().map((monthData, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: '#f5f5f5' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#9c27b0', mb: 2 }}>
+                    📅 {monthData.month}
+                  </Typography>
+                  <List dense>
+                    {monthData.days.map((day, dayIndex) => (
+                      <React.Fragment key={dayIndex}>
+                        {dayIndex > 0 && <Divider />}
+                        <ListItem>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Typography variant="body1">
+                                  🏖️ {day.formattedDate}
+                                </Typography>
+                                <Chip 
+                                  label={`${day.runningHours.toFixed(1)}h`}
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="caption" color="textSecondary">
+                                Running time: {day.runningHours.toFixed(2)} hours (Less than 3 hours threshold)
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      </React.Fragment>
+                    ))}
+                  </List>
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Total: {monthData.days.length} day(s)
+                    </Typography>
+                    <Chip 
+                      label={`${monthData.days.reduce((sum, d) => sum + d.runningHours, 0).toFixed(1)}h total`}
+                      size="small"
+                      variant="filled"
+                      sx={{ bgcolor: '#f3e5f5' }}
+                    />
+                  </Box>
+                </Paper>
+              ))}
+            </>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <LeaveIcon sx={{ fontSize: 64, color: '#e0e0e0', mb: 2 }} />
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                No Leave Days Found
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                All recorded days have 3 or more hours of activity
+              </Typography>
+              <Button 
+                variant="contained" 
+                sx={{ mt: 2 }}
+                onClick={fetchLeaveDays}
+                startIcon={<RefreshIcon />}
+              >
+                Scan for Leave Days
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeaveDaysDialogOpen(false)} color="primary">
             Close
           </Button>
         </DialogActions>
