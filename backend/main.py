@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import work_patterns, learning, health, insights, users, application_activity, alerts
+from app.routers import work_patterns, learning, health, insights, users, application_activity, alerts, categories
 
 # Load environment variables
 load_dotenv()
@@ -41,6 +41,7 @@ app.include_router(learning.router, prefix="/api/learning", tags=["learning"])
 app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(insights.router, prefix="/api/insights", tags=["insights"])
 app.include_router(alerts.router, tags=["alerts"])
+app.include_router(categories.router, prefix="/api", tags=["categories"])
 
 @app.get("/")
 async def root():

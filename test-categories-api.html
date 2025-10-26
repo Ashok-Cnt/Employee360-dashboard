@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Categories API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        pre {
+            background-color: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Category Configuration API Test</h1>
+        
+        <div>
+            <button onclick="testGetCategories()">GET /api/categories</button>
+            <button onclick="testGetApplications()">GET /api/applications</button>
+            <button onclick="testHealthCheck()">GET /health</button>
+        </div>
+        
+        <h2>Response:</h2>
+        <div id="status"></div>
+        <pre id="response">Click a button to test the API...</pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+
+        async function testGetCategories() {
+            try {
+                document.getElementById('status').innerHTML = '<span class="success">Loading...</span>';
+                const response = await fetch(`${API_BASE}/api/categories`);
+                const data = await response.json();
+                document.getElementById('status').innerHTML = `<span class="success">✓ Success (Status: ${response.status})</span>`;
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+                document.getElementById('response').textContent = error.stack;
+            }
+        }
+
+        async function testGetApplications() {
+            try {
+                document.getElementById('status').innerHTML = '<span class="success">Loading...</span>';
+                const response = await fetch(`${API_BASE}/api/applications`);
+                const data = await response.json();
+                document.getElementById('status').innerHTML = `<span class="success">✓ Success (Status: ${response.status})</span>`;
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+                document.getElementById('response').textContent = error.stack;
+            }
+        }
+
+        async function testHealthCheck() {
+            try {
+                document.getElementById('status').innerHTML = '<span class="success">Loading...</span>';
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('status').innerHTML = `<span class="success">✓ Success (Status: ${response.status})</span>`;
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+                document.getElementById('response').textContent = error.stack;
+            }
+        }
+    </script>
+</body>
+</html>

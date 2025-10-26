@@ -27,8 +27,60 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Function to load categories from config file
+def load_categories_from_config():
+    """Load application categories from the backend config file"""
+    try:
+        # Path to the category config file
+        config_path = Path(__file__).parent.parent / 'backend-express' / 'data' / 'category_config.json'
+        
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                
+            # Map config categories to collector categories
+            app_categories = {
+                'Productive': [],
+                'Communication': [],
+                'Browsers': [],
+                'Media': [],
+                'Non-Productive': []
+            }
+            
+            for category in config.get('categories', []):
+                if category['id'] == 'productivity':
+                    app_categories['Productive'] = category.get('applications', [])
+                elif category['id'] == 'communication':
+                    app_categories['Communication'] = category.get('applications', [])
+                elif category['id'] == 'break':
+                    # Split break apps into Media and Non-Productive based on common patterns
+                    break_apps = category.get('applications', [])
+                    for app in break_apps:
+                        if any(x in app.lower() for x in ['spotify', 'netflix', 'youtube', 'vlc', 'media', 'itunes']):
+                            app_categories['Media'].append(app)
+                        elif any(x in app.lower() for x in ['steam', 'game', 'epic', 'origin', 'xbox']):
+                            app_categories['Non-Productive'].append(app)
+                        else:
+                            # Default to Media for other break apps
+                            app_categories['Media'].append(app)
+            
+            logger.info(f"✅ Loaded categories from config: Productive={len(app_categories['Productive'])}, "
+                       f"Communication={len(app_categories['Communication'])}, "
+                       f"Media={len(app_categories['Media'])}, Non-Productive={len(app_categories['Non-Productive'])}")
+            
+            return app_categories
+        else:
+            logger.warning(f"⚠️ Category config file not found at {config_path}, using defaults")
+            return None
+    except Exception as e:
+        logger.error(f"❌ Error loading categories from config: {e}")
+        return None
+
+# Try to load categories from config, fallback to hardcoded if fails
+_loaded_categories = load_categories_from_config()
+
 # Application Categories
-APP_CATEGORIES = {
+APP_CATEGORIES = _loaded_categories if _loaded_categories else {
     'Productive': [
         'Visual Studio Code', 'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint',
         'JetBrains Rider', 'IntelliJ IDEA', 'Idea64', 'PyCharm', 'WebStorm', 'Adobe Photoshop',
@@ -36,7 +88,7 @@ APP_CATEGORIES = {
         'Visual Studio', 'Eclipse', 'NetBeans', 'Android Studio', 'SQL Developer', 'Sqldeveloper64w',
         'Oracle SQL Developer', 'DBeaver', 'DataGrip', 'Bruno', 'Insomnia',
         'Microsoft OneNote', 'OneNote', 'ONENOTEM', 'Evernote', 'Notion', 'Obsidian', 'Notepad',
-        'Git', 'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
+        'GitHub Desktop', 'GitKraken', 'SourceTree', 'FileZilla',
         'WinSCP', 'PuTTY', 'mPuTTY', 'KiTTY', 'MobaXterm', 'SecureCRT'
     ],
     'Communication': [
@@ -490,7 +542,7 @@ class ActivityTracker:
         try:
             name = info['name'].lower()
             
-            # Exclude obvious system processes
+            # Exclude obvious system processes and background development tools
             excluded_processes = {
                 'system', 'registry', 'smss.exe', 'csrss.exe', 'wininit.exe',
                 'services.exe', 'lsass.exe', 'svchost.exe', 'dwm.exe',
@@ -498,7 +550,12 @@ class ActivityTracker:
                 'spoolsv.exe', 'lsaiso.exe', 'fontdrvhost.exe', 'dllhost.exe',
                 'runtimebroker.exe', 'sihost.exe', 'ctfmon.exe', 'taskhostw.exe',
                 'searchindexer.exe', 'searchprotocolhost.exe', 'winlogon.exe',
-                'systemsettings.exe', 'webviewhost.exe'  # System UI processes
+                'systemsettings.exe', 'webviewhost.exe',  # System UI processes
+                # Background development tools
+                'git.exe', 'git-credential-manager.exe', 'ssh.exe', 'ssh-agent.exe',
+                'node.exe', 'python.exe', 'pythonw.exe',  # Backend processes
+                'java.exe', 'javaw.exe',  # Java processes
+                'powershell.exe', 'cmd.exe',  # Command line tools (running in background)
             }
             
             if name in excluded_processes:

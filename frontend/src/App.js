@@ -12,6 +12,8 @@ import HealthMetrics from './pages/HealthMetrics';
 import AIInsights from './pages/AIInsights';
 import ApplicationActivity from './pages/ApplicationActivity';
 import AlertRules from './pages/AlertRules';
+import CategoryConfiguration from './pages/CategoryConfiguration';
+import HolidayManagement from './pages/HolidayManagement';
 
 const drawerWidth = 240; // keep for potential responsive logic
 
@@ -43,17 +45,9 @@ function App() {
     }, 10000); // 10 second timeout
   }, [dispatch]);
 
-  // Set up periodic refresh of user data
+  // Auto-refresh of user data disabled
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      // Refresh user data every 30 seconds to get latest changes from DB
-      const refreshInterval = setInterval(() => {
-        dispatch(refreshUserData());
-      }, 30000); // 30 seconds
-
-      // Clean up interval on unmount
-      return () => clearInterval(refreshInterval);
-    }
+    // Removed periodic user data refresh
   }, [dispatch, isAuthenticated, currentUser]);
 
   // Show loading only for main user authentication, not system user
@@ -119,6 +113,8 @@ function App() {
           <Route path="/insights" element={<AIInsights currentUser={currentUser} />} />
           <Route path="/application-activity" element={<ApplicationActivity />} />
           <Route path="/alert-rules" element={<AlertRules />} />
+          <Route path="/category-configuration" element={<CategoryConfiguration />} />
+          <Route path="/holiday-management" element={<HolidayManagement />} />
         </Routes>
       </Box>
     </Box>

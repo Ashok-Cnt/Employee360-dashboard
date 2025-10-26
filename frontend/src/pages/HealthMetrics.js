@@ -198,14 +198,9 @@ const HealthMetrics = () => {
     };
   }, [dispatch, activeDevice, dataSource, realtimeData, historicalData, connectedDevices]);
 
-  // Fetch realtime data periodically
+  // Auto-refresh disabled
   useEffect(() => {
-    if (dataSource === 'BLE') {
-      const interval = setInterval(() => {
-        dispatch(fetchRealtimeData(userId));
-      }, 30000); // Every 30 seconds
-      return () => clearInterval(interval);
-    }
+    // Removed auto-refresh for BLE data
   }, [dataSource, dispatch, userId]);
 
   // Handle BLE device connection

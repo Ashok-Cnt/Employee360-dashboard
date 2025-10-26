@@ -1,0 +1,84 @@
+{
+  "holidays": [
+    {
+      "id": "1",
+      "name": "Pongal",
+      "date": "2025-01-14",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "2",
+      "name": "Tamizh Puthandu",
+      "date": "2025-04-14",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "3",
+      "name": "May Day",
+      "date": "2025-05-01",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "4",
+      "name": "Bakrid (Eid-Al-Adha)",
+      "date": "2025-06-07",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "5",
+      "name": "Independence Day",
+      "date": "2025-08-15",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "6",
+      "name": "Ganesh Chaturthi",
+      "date": "2025-08-27",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "7",
+      "name": "Ayudha Pooja",
+      "date": "2025-10-01",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "8",
+      "name": "Gandhi Jayanthi",
+      "date": "2025-10-02",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "9",
+      "name": "Diwali",
+      "date": "2025-10-20",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    },
+    {
+      "id": "10",
+      "name": "Christmas",
+      "date": "2025-12-25",
+      "type": "public",
+      "country": "IN",
+      "description": ""
+    }
+  ]
+}
