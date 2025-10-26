@@ -27,60 +27,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Function to load categories from config file
-def load_categories_from_config():
-    """Load application categories from the backend config file"""
-    try:
-        # Path to the category config file
-        config_path = Path(__file__).parent.parent / 'backend-express' / 'data' / 'category_config.json'
-        
-        if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                
-            # Map config categories to collector categories
-            app_categories = {
-                'Productive': [],
-                'Communication': [],
-                'Browsers': [],
-                'Media': [],
-                'Non-Productive': []
-            }
-            
-            for category in config.get('categories', []):
-                if category['id'] == 'productivity':
-                    app_categories['Productive'] = category.get('applications', [])
-                elif category['id'] == 'communication':
-                    app_categories['Communication'] = category.get('applications', [])
-                elif category['id'] == 'break':
-                    # Split break apps into Media and Non-Productive based on common patterns
-                    break_apps = category.get('applications', [])
-                    for app in break_apps:
-                        if any(x in app.lower() for x in ['spotify', 'netflix', 'youtube', 'vlc', 'media', 'itunes']):
-                            app_categories['Media'].append(app)
-                        elif any(x in app.lower() for x in ['steam', 'game', 'epic', 'origin', 'xbox']):
-                            app_categories['Non-Productive'].append(app)
-                        else:
-                            # Default to Media for other break apps
-                            app_categories['Media'].append(app)
-            
-            logger.info(f"✅ Loaded categories from config: Productive={len(app_categories['Productive'])}, "
-                       f"Communication={len(app_categories['Communication'])}, "
-                       f"Media={len(app_categories['Media'])}, Non-Productive={len(app_categories['Non-Productive'])}")
-            
-            return app_categories
-        else:
-            logger.warning(f"⚠️ Category config file not found at {config_path}, using defaults")
-            return None
-    except Exception as e:
-        logger.error(f"❌ Error loading categories from config: {e}")
-        return None
-
-# Try to load categories from config, fallback to hardcoded if fails
-_loaded_categories = load_categories_from_config()
-
 # Application Categories
-APP_CATEGORIES = _loaded_categories if _loaded_categories else {
+APP_CATEGORIES = {
     'Productive': [
         'Visual Studio Code', 'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint',
         'JetBrains Rider', 'IntelliJ IDEA', 'Idea64', 'PyCharm', 'WebStorm', 'Adobe Photoshop',
