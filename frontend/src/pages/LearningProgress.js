@@ -33,6 +33,14 @@ import {
   TableHead,
   TableRow,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Tabs,
+  Tab,
+  Pagination,
 } from '@mui/material';
 import {
   School as SchoolIcon,
@@ -46,6 +54,11 @@ import {
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
   PlayArrow as PlayArrowIcon,
   ArrowForward as ArrowForwardIcon,
+  Flag as FlagIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 const LearningProgress = () => {
@@ -56,6 +69,25 @@ const LearningProgress = () => {
   const [stats, setStats] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(7); // Last 7 days
   const [expandedCourse, setExpandedCourse] = useState(null);
+  const [goals, setGoals] = useState([]);
+  const [openGoalDialog, setOpenGoalDialog] = useState(false);
+  const [newGoalText, setNewGoalText] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [newGoalCourseId, setNewGoalCourseId] = useState('');
+  const [newGoalHours, setNewGoalHours] = useState('');
+  const [editingGoalIndex, setEditingGoalIndex] = useState(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editGoalText, setEditGoalText] = useState('');
+  const [editGoalTarget, setEditGoalTarget] = useState('');
+  const [editGoalCourseId, setEditGoalCourseId] = useState('');
+  const [editGoalHours, setEditGoalHours] = useState('');
+  
+  // Pagination and tabs state
+  const [goalsTab, setGoalsTab] = useState(0); // 0: In Progress, 1: Completed
+  const [goalsPage, setGoalsPage] = useState(1);
+  const [coursesTab, setCoursesTab] = useState(0); // 0: In Progress, 1: Completed
+  const [coursesPage, setCoursesPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Helper function to get period text
   const getPeriodText = (days) => {
@@ -68,6 +100,72 @@ const LearningProgress = () => {
     if (percentage === 100) return 'success';
     if (percentage >= 50) return 'warning';
     return 'error';
+  };
+
+  // Helper function to get course completion by courseId
+  const getCourseCompletion = (courseId) => {
+    if (!courseId || !allCoursesData?.courses) return null;
+    const course = allCoursesData.courses.find(c => c.courseId === courseId);
+    return course ? course.stats.percentComplete : null;
+  };
+
+  // Helper function to get course name by courseId
+  const getCourseName = (courseId) => {
+    if (!courseId || !allCoursesData?.courses) return null;
+    const course = allCoursesData.courses.find(c => c.courseId === courseId);
+    return course ? course.courseName : null;
+  };
+
+  // Helper function to calculate average hours per day
+  const getAverageHoursPerDay = (goalTotalHours, targetDate, createdDate) => {
+    if (!goalTotalHours || !targetDate) return null;
+    const start = new Date(createdDate);
+    const end = new Date(targetDate);
+    const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    if (daysDiff <= 0) return null;
+    return (goalTotalHours / daysDiff).toFixed(1);
+  };
+
+  // Calculate time spent today on a specific course
+  const getTodayTimeSpent = (courseId) => {
+    if (!todayData || !todayData.courses) return null;
+    const course = todayData.courses.find(c => c.courseId === courseId);
+    if (!course) return null;
+    
+    const completedLessons = course.stats.completedLessons;
+    if (completedLessons === 0) return null;
+    
+    // Calculate actual time from timestamps if available
+    if (course.firstTimestamp && course.lastTimestamp) {
+      const firstTime = new Date(course.firstTimestamp);
+      const lastTime = new Date(course.lastTimestamp);
+      const diffMs = lastTime - firstTime;
+      const totalMinutes = Math.round(diffMs / (1000 * 60));
+      
+      if (totalMinutes < 1) {
+        // If less than 1 minute, estimate based on lessons
+        const estimatedMinutes = completedLessons * 5;
+        return estimatedMinutes < 60 ? `${estimatedMinutes} min` : `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}min`;
+      }
+      
+      if (totalMinutes < 60) {
+        return `${totalMinutes} min`;
+      } else {
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+      }
+    }
+    
+    // Fallback: estimate 5 minutes per lesson if no timestamps
+    const estimatedMinutes = completedLessons * 5;
+    if (estimatedMinutes < 60) {
+      return `~${estimatedMinutes} min`;
+    } else {
+      const hours = Math.floor(estimatedMinutes / 60);
+      const mins = estimatedMinutes % 60;
+      return mins > 0 ? `~${hours}h ${mins}min` : `~${hours}h`;
+    }
   };
 
   // Fetch today's learning progress from new API
@@ -109,6 +207,111 @@ const LearningProgress = () => {
     }
   };
 
+  // Fetch learning goals
+  const fetchGoals = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8001/api/goals');
+      if (!response.ok) throw new Error('Failed to fetch goals');
+      const data = await response.json();
+      setGoals(data.goals || []);
+    } catch (err) {
+      console.error('Error fetching goals:', err);
+    }
+  };
+
+  // Add new goal
+  const handleAddGoal = async () => {
+    if (!newGoalText.trim()) return;
+    try {
+      const response = await fetch('http://127.0.0.1:8001/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goalText: newGoalText,
+          targetDate: newGoalTarget || null,
+          courseId: newGoalCourseId || null,
+          totalHours: newGoalHours ? parseFloat(newGoalHours) : null
+        })
+      });
+      if (!response.ok) throw new Error('Failed to add goal');
+      setNewGoalText('');
+      setNewGoalTarget('');
+      setNewGoalCourseId('');
+      setNewGoalHours('');
+      setOpenGoalDialog(false);
+      fetchGoals();
+    } catch (err) {
+      console.error('Error adding goal:', err);
+    }
+  };
+
+  // Update goal status
+  const handleToggleGoal = async (index, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+      const response = await fetch(`http://127.0.0.1:8001/api/goals/${index}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!response.ok) throw new Error('Failed to update goal');
+      fetchGoals();
+    } catch (err) {
+      console.error('Error updating goal:', err);
+    }
+  };
+
+  // Open edit dialog with current goal data
+  const handleOpenEditDialog = (index, goal) => {
+    setEditingGoalIndex(index);
+    setEditGoalText(goal.goalText);
+    setEditGoalTarget(goal.targetDate || '');
+    setEditGoalCourseId(goal.courseId || '');
+    setEditGoalHours(goal.totalHours || '');
+    setOpenEditDialog(true);
+  };
+
+  // Update goal
+  const handleUpdateGoal = async () => {
+    if (!editGoalText.trim()) return;
+    try {
+      const response = await fetch(`http://127.0.0.1:8001/api/goals/${editingGoalIndex}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goalText: editGoalText,
+          targetDate: editGoalTarget || null,
+          courseId: editGoalCourseId || null,
+          totalHours: editGoalHours ? parseFloat(editGoalHours) : null
+        })
+      });
+      if (!response.ok) throw new Error('Failed to update goal');
+      setOpenEditDialog(false);
+      setEditingGoalIndex(null);
+      setEditGoalText('');
+      setEditGoalTarget('');
+      setEditGoalCourseId('');
+      setEditGoalHours('');
+      fetchGoals();
+    } catch (err) {
+      console.error('Error updating goal:', err);
+    }
+  };
+
+  // Delete goal
+  const handleDeleteGoal = async (index) => {
+    if (!window.confirm('Are you sure you want to delete this goal?')) return;
+    try {
+      const response = await fetch(`http://127.0.0.1:8001/api/goals/${index}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete goal');
+      fetchGoals();
+    } catch (err) {
+      console.error('Error deleting goal:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -116,7 +319,8 @@ const LearningProgress = () => {
       await Promise.all([
         fetchTodayProgress(),
         fetchAllCourses(selectedPeriod),
-        fetchStats(selectedPeriod)
+        fetchStats(selectedPeriod),
+        fetchGoals()
       ]);
       setLoading(false);
     };
@@ -246,19 +450,41 @@ const LearningProgress = () => {
         <Typography variant="h4" gutterBottom>
           Learning Progress
         </Typography>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Period</InputLabel>
-          <Select
-            value={selectedPeriod}
-            label="Period"
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-          >
-            <MenuItem value={1}>Today</MenuItem>
-            <MenuItem value={7}>Last 7 Days</MenuItem>
-            <MenuItem value={30}>Last 30 Days</MenuItem>
-            <MenuItem value={90}>Last 90 Days</MenuItem>
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Tooltip title="Refresh learning progress data">
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={async () => {
+                setLoading(true);
+                await Promise.all([
+                  fetchTodayProgress(),
+                  fetchAllCourses(selectedPeriod),
+                  fetchStats(selectedPeriod),
+                  fetchGoals()
+                ]);
+                setLoading(false);
+              }}
+              disabled={loading}
+              sx={{ minWidth: '120px' }}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </Tooltip>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Period</InputLabel>
+            <Select
+              value={selectedPeriod}
+              label="Period"
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+            >
+              <MenuItem value={1}>Today</MenuItem>
+              <MenuItem value={7}>Last 7 Days</MenuItem>
+              <MenuItem value={30}>Last 30 Days</MenuItem>
+              <MenuItem value={90}>Last 90 Days</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       {error && (
@@ -343,6 +569,296 @@ const LearningProgress = () => {
       </Grid>
 
       <Grid container spacing={3}>
+        {/* Learning Goals Section */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FlagIcon sx={{ mr: 1, color: 'primary.main' }} />
+            <Typography variant="h6">Learning Goals</Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenGoalDialog(true)}
+            size="small"
+          >
+            Add Goal
+          </Button>
+        </Box>
+
+        <Tabs 
+          value={goalsTab} 
+          onChange={(e, newValue) => {
+            setGoalsTab(newValue);
+            setGoalsPage(1);
+          }} 
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label={`In Progress (${goals.filter(g => g.status !== 'completed').length})`} />
+          <Tab label={`Completed (${goals.filter(g => g.status === 'completed').length})`} />
+        </Tabs>
+
+        {goals && goals.length > 0 ? (
+          <>
+          <List>
+            {goals
+              .filter(goal => goalsTab === 0 ? goal.status !== 'completed' : goal.status === 'completed')
+              .slice((goalsPage - 1) * itemsPerPage, goalsPage * itemsPerPage)
+              .map((goal, index) => {
+                const actualIndex = goals.findIndex(g => g === goal);
+                return (
+              <ListItem
+                key={actualIndex}
+                sx={{
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  mb: 1,
+                  bgcolor: goal.status === 'completed' ? 'success.light' : 'background.paper',
+                  opacity: goal.status === 'completed' ? 0.7 : 1
+                }}
+              >
+                <IconButton
+                  onClick={() => handleToggleGoal(index, goal.status)}
+                  sx={{ mr: 2 }}
+                >
+                  {goal.status === 'completed' ? (
+                    <CheckCircleIcon color="success" />
+                  ) : (
+                    <RadioButtonUncheckedIcon />
+                  )}
+                </IconButton>
+                <ListItemText
+                  primary={goal.goalText}
+                  secondary={
+                    <Box>
+                      <Stack direction="row" spacing={1} sx={{ mt: 0.5, mb: 1 }}>
+                        {goal.targetDate && (
+                          <Chip
+                            label={`Target: ${new Date(goal.targetDate).toLocaleDateString()}`}
+                            size="small"
+                            variant="outlined"
+                            icon={<CalendarIcon />}
+                          />
+                        )}
+                        {goal.totalHours && (
+                          <Chip
+                            label={`${goal.totalHours} hours`}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                          />
+                        )}
+                        <Chip
+                          label={`Added: ${new Date(goal.createdAt).toLocaleDateString()}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Stack>
+                      {goal.totalHours && goal.targetDate && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                          <strong>Average:</strong> {getAverageHoursPerDay(goal.totalHours, goal.targetDate, goal.createdAt)} hours/day
+                        </Typography>
+                      )}
+                      {goal.courseId && getTodayTimeSpent(goal.courseId) && (
+                        <Typography variant="caption" color="success.main" sx={{ display: 'block', mb: 0.5, fontWeight: 'medium' }}>
+                          <strong>Today:</strong> {getTodayTimeSpent(goal.courseId)} ({todayData?.courses?.find(c => c.courseId === goal.courseId)?.stats?.completedLessons || 0} lessons completed)
+                        </Typography>
+                      )}
+                      {goal.courseId && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                            <strong>Course:</strong> {getCourseName(goal.courseId) || goal.courseId}
+                          </Typography>
+                          {getCourseCompletion(goal.courseId) !== null && (
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ minWidth: 40 }}>
+                                  {getCourseCompletion(goal.courseId)}%
+                                </Typography>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={getCourseCompletion(goal.courseId)}
+                                  color={getProgressColor(getCourseCompletion(goal.courseId))}
+                                  sx={{ flex: 1, height: 6, borderRadius: 1 }}
+                                />
+                              </Box>
+                            </Box>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  }
+                  sx={{
+                    textDecoration: goal.status === 'completed' ? 'line-through' : 'none'
+                  }}
+                />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButton
+                    onClick={() => handleOpenEditDialog(index, goal)}
+                    size="small"
+                    color="primary"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDeleteGoal(index)}
+                    size="small"
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </ListItem>
+                );
+              })}
+          </List>
+          
+          {goals.filter(goal => goalsTab === 0 ? goal.status !== 'completed' : goal.status === 'completed').length > itemsPerPage && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Pagination 
+                count={Math.ceil(goals.filter(goal => goalsTab === 0 ? goal.status !== 'completed' : goal.status === 'completed').length / itemsPerPage)}
+                page={goalsPage}
+                onChange={(e, page) => setGoalsPage(page)}
+                color="primary"
+              />
+            </Box>
+          )}
+          </>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <FlagIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="body1" color="text.secondary">
+              No learning goals set yet. Click "Add Goal" to create your first goal!
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+        </Grid>
+
+      {/* Goal Dialog */}
+      <Dialog open={openGoalDialog} onClose={() => setOpenGoalDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Learning Goal</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Goal Description"
+            fullWidth
+            multiline
+            rows={3}
+            value={newGoalText}
+            onChange={(e) => setNewGoalText(e.target.value)}
+            placeholder="E.g., Complete Advanced JavaScript course by end of month"
+            sx={{ mb: 2 }}
+          />
+          <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+            <InputLabel>Link to Course (Optional)</InputLabel>
+            <Select
+              value={newGoalCourseId}
+              label="Link to Course (Optional)"
+              onChange={(e) => setNewGoalCourseId(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>No course selected</em>
+              </MenuItem>
+              {allCoursesData?.courses?.map((course) => (
+                <MenuItem key={course.courseId} value={course.courseId}>
+                  {course.courseName} ({course.stats.percentComplete}%)
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            margin="dense"
+            label="Total Hours (Optional)"
+            type="number"
+            fullWidth
+            value={newGoalHours}
+            onChange={(e) => setNewGoalHours(e.target.value)}
+            InputProps={{ inputProps: { min: 0, step: 0.5 } }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Target Date (Optional)"
+            type="date"
+            fullWidth
+            value={newGoalTarget}
+            onChange={(e) => setNewGoalTarget(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenGoalDialog(false)}>Cancel</Button>
+          <Button onClick={handleAddGoal} variant="contained" disabled={!newGoalText.trim()}>
+            Add Goal
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Goal Dialog */}
+      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Learning Goal</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Goal Description"
+            fullWidth
+            multiline
+            rows={3}
+            value={editGoalText}
+            onChange={(e) => setEditGoalText(e.target.value)}
+            placeholder="E.g., Complete Advanced JavaScript course by end of month"
+            sx={{ mb: 2 }}
+          />
+          <FormControl fullWidth margin="dense" sx={{ mb: 2 }}>
+            <InputLabel>Link to Course (Optional)</InputLabel>
+            <Select
+              value={editGoalCourseId}
+              label="Link to Course (Optional)"
+              onChange={(e) => setEditGoalCourseId(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>No course selected</em>
+              </MenuItem>
+              {allCoursesData?.courses?.map((course) => (
+                <MenuItem key={course.courseId} value={course.courseId}>
+                  {course.courseName} ({course.stats.percentComplete}%)
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            margin="dense"
+            label="Total Hours (Optional)"
+            type="number"
+            fullWidth
+            value={editGoalHours}
+            onChange={(e) => setEditGoalHours(e.target.value)}
+            InputProps={{ inputProps: { min: 0, step: 0.5 } }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Target Date (Optional)"
+            type="date"
+            fullWidth
+            value={editGoalTarget}
+            onChange={(e) => setEditGoalTarget(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
+          <Button onClick={handleUpdateGoal} variant="contained" disabled={!editGoalText.trim()}>
+            Update Goal
+          </Button>
+        </DialogActions>
+      </Dialog>
+
         {/* Today's Learning Activity */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: '100%' }}>
@@ -448,7 +964,7 @@ const LearningProgress = () => {
             
             {stats && stats.topCourses && stats.topCourses.length > 0 ? (
               <List>
-                {stats.topCourses.map((course, index) => (
+                {stats.topCourses.slice(0, 5).map((course, index) => (
                   <React.Fragment key={course.courseId}>
                     <ListItem alignItems="flex-start" sx={{ px: 0 }}>
                       <Box sx={{ 
@@ -493,7 +1009,7 @@ const LearningProgress = () => {
                         }
                       />
                     </ListItem>
-                    {index < stats.topCourses.length - 1 && <Divider />}
+                    {index < stats.topCourses.slice(0, 5).length - 1 && <Divider />}
                   </React.Fragment>
                 ))}
               </List>
@@ -516,12 +1032,27 @@ const LearningProgress = () => {
       {allCoursesData && allCoursesData.courses && allCoursesData.courses.length > 0 && (
         <Box sx={{ mt: 3 }}>
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h5" sx={{ mb: 3 }}>
+            <Typography variant="h5" sx={{ mb: 2 }}>
               All Courses ({allCoursesData.period || getPeriodText(selectedPeriod)})
             </Typography>
             
+            <Tabs 
+              value={coursesTab} 
+              onChange={(e, newValue) => {
+                setCoursesTab(newValue);
+                setCoursesPage(1);
+              }} 
+              sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab label={`In Progress (${allCoursesData.courses.filter(c => c.stats.percentComplete < 100).length})`} />
+              <Tab label={`Completed (${allCoursesData.courses.filter(c => c.stats.percentComplete === 100).length})`} />
+            </Tabs>
+            
             <Grid container spacing={2}>
-              {allCoursesData.courses.map((course) => (
+              {allCoursesData.courses
+                .filter(course => coursesTab === 0 ? course.stats.percentComplete < 100 : course.stats.percentComplete === 100)
+                .slice((coursesPage - 1) * itemsPerPage, coursesPage * itemsPerPage)
+                .map((course) => (
                 <Grid item xs={12} key={course.courseId}>
                   <Card sx={{ '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.3s' }}>
                     <CardContent>
@@ -588,6 +1119,17 @@ const LearningProgress = () => {
                 </Grid>
               ))}
             </Grid>
+            
+            {allCoursesData.courses.filter(course => coursesTab === 0 ? course.stats.percentComplete < 100 : course.stats.percentComplete === 100).length > itemsPerPage && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                <Pagination 
+                  count={Math.ceil(allCoursesData.courses.filter(course => coursesTab === 0 ? course.stats.percentComplete < 100 : course.stats.percentComplete === 100).length / itemsPerPage)}
+                  page={coursesPage}
+                  onChange={(e, page) => setCoursesPage(page)}
+                  color="primary"
+                />
+              </Box>
+            )}
           </Paper>
         </Box>
       )}

@@ -48,6 +48,8 @@ async function parseUdemyJSONL(filePath) {
             courseUrl,
             platform: 'Udemy',
             timestamp: entry.timestamp,
+            firstTimestamp: entry.timestamp,
+            lastTimestamp: entry.timestamp,
             sections: new Map(),
             stats: {
               totalSections: 0,
@@ -92,9 +94,14 @@ async function parseUdemyJSONL(filePath) {
           }
         }
         
-        // Update timestamp to latest
-        if (new Date(entry.timestamp) > new Date(course.timestamp)) {
-          course.timestamp = entry.timestamp;
+        // Update timestamp to latest and track first/last
+        const entryTime = new Date(entry.timestamp);
+        if (entryTime > new Date(course.lastTimestamp)) {
+          course.lastTimestamp = entry.timestamp;
+          course.timestamp = entry.timestamp; // Keep latest as main timestamp
+        }
+        if (entryTime < new Date(course.firstTimestamp)) {
+          course.firstTimestamp = entry.timestamp;
         }
         
         // Merge sections data (each entry may have different sections expanded)

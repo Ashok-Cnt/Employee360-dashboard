@@ -149,7 +149,8 @@ app.get('/', (req, res) => {
         stats: '/api/udemy-tracker/stats',
         files: '/api/udemy-tracker/files',
         fileData: '/api/udemy-tracker/file/:filename'
-      }
+      },
+       goals: '/api/goals' // New goals endpoint
     }
   });
 });
@@ -160,12 +161,15 @@ const appRoutes = require('./routes/applications-json');
 const aiSuggestionsRoutes = require('./routes/ai-suggestions-json');
 const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL reader router
 const alertsRoutes = require('./routes/alerts');
+const notificationsRoutes = require('./routes/notifications');
 const healthMetricsRoutes = require('./routes/health-metrics-v2'); // Enhanced version with backend logic
 const localStorageRoutes = require('./routes/local-storage');
 const learningProgressRoutes = require('./routes/learning-progress');
 const categoriesRoutes = require('./routes/categories');
 const holidaysRoutes = require('./routes/holidays');
 const udemyCoursesRoutes = require('./routes/udemy-courses'); // New Udemy course details
+const goalsRoutes = require('./routes/goals'); // New goals route
+const userPreferencesRoutes = require('./routes/user-preferences'); // User preferences (display name, reminders)
 
 // ========================================
 // Udemy Tracker Extension Endpoints
@@ -409,12 +413,15 @@ app.use('/api/apps', appRoutes);
 app.use('/api/ai-suggestions', aiSuggestionsRoutes);
 app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/health', healthMetricsRoutes);
 app.use('/api/local-storage', localStorageRoutes);
 app.use('/api/learning-progress', learningProgressRoutes);
 app.use('/api/udemy-courses', udemyCoursesRoutes); // New Udemy course details
+app.use('/api/goals', goalsRoutes); 
 app.use('/api', categoriesRoutes);
 app.use('/api/holidays', holidaysRoutes);
+app.use('/api/preferences', userPreferencesRoutes); // User preferences API
 
 // Error handling middleware
 app.use((err, req, res, next) => {

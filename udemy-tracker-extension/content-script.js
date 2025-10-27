@@ -150,11 +150,32 @@
     const urlMatch = window.location.pathname.match(/\/course\/([^/]+)/);
     const courseId = urlMatch ? urlMatch[1] : 'unknown-course';
 
-    // Extract course title from the page - try multiple selectors
-    let courseTitle = document.querySelector('span.curriculum-item-view--course-title--s5jCa')?.textContent.trim() ||
-                      document.querySelector('.ud-text-xl[data-purpose="title"]')?.textContent.trim() ||
-                      document.querySelector('.course-lead--course-title--neX4I')?.textContent.trim() ||
-                      document.title.split('|')[0].trim();
+    // Extract course title from the page - try multiple selectors in priority order
+    // Priority 1: Try the curriculum course title (most reliable)
+    let courseTitle = document.querySelector('span.curriculum-item-view--course-title--s5jCa')?.textContent.trim();
+    
+    // Priority 2: Try the course-lead title (on course overview page)
+    if (!courseTitle) {
+      courseTitle = document.querySelector('.course-lead--course-title--neX4I')?.textContent.trim();
+    }
+    
+    // Priority 3: Try the header course title
+    if (!courseTitle) {
+      const headerTitle = document.querySelector('h1.ud-heading-serif-xxxl, h1.ud-heading-xl');
+      courseTitle = headerTitle?.textContent.trim();
+    }
+    
+    // Priority 4: Extract from document title (remove "| Udemy" suffix)
+    if (!courseTitle) {
+      courseTitle = document.title.split('|')[0].trim();
+    }
+    
+    // Fallback if still no title
+    if (!courseTitle) {
+      courseTitle = 'Unknown Course';
+    }
+
+    console.log('📚 Course Title:', courseTitle);
 
     // Extract sections
     const sections = await extractSections();

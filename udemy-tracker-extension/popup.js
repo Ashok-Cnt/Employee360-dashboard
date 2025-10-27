@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const lessonsCount = document.getElementById('lessonsCount');
   const completedCount = document.getElementById('completedCount');
   const progressPercent = document.getElementById('progressPercent');
+  const closeBtn = document.getElementById('closeBtn');
+
+  // Close button handler
+  closeBtn.addEventListener('click', () => {
+    window.close();
+  });
 
   // Show message
   function showMessage(text, type = 'info') {

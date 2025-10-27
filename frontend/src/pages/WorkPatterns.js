@@ -1549,18 +1549,6 @@ const WorkPatterns = () => {
   const handleHeatmapAccordionView = (hourIndex) => handleHeatmapClick(hourIndex);
   const handleHeatmapStepperView = (hourIndex) => handleHeatmapClick(hourIndex);
 
-  // Check if running hours indicate possible leave (less than 3 hours)
-  const isPossibleLeave = React.useMemo(() => {
-    if (!activityData || !activityData.system?.aggregates) {
-      console.log('Leave Check: No activity data or aggregates');
-      return false;
-    }
-    const runningHours = activityData.system.aggregates.overallMonitoringHours || 0;
-    console.log('Leave Check: Running hours =', runningHours);
-    console.log('Leave Check: Is possible leave?', runningHours > 0 && runningHours < 3);
-    return runningHours > 0 && runningHours < 3;
-  }, [activityData]);
-
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -1581,32 +1569,10 @@ const WorkPatterns = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      {/* Leave Day Alert Banner */}
-      {isPossibleLeave && (
-        <Alert 
-          severity="warning" 
-          icon={<span style={{ fontSize: '24px' }}>🏖️</span>}
-          sx={{ mb: 2, fontWeight: 'bold' }}
-        >
-          <strong>Possible Leave Day Detected!</strong> Running time is only{' '}
-          <strong>{(activityData.system.aggregates.overallMonitoringHours || 0).toFixed(1)} hours</strong>{' '}
-          (less than 3 hours). You may have taken leave on this day.
-        </Alert>
-      )}
-      
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
           Work Pattern Analysis
         </Typography>
-        {isPossibleLeave && (
-          <Chip
-            icon={<span>🏖️</span>}
-            label={`Possible Leave (${(activityData.system.aggregates.overallMonitoringHours || 0).toFixed(1)}h)`}
-            color="warning"
-            variant="filled"
-            sx={{ fontWeight: 'bold', fontSize: '0.9rem', py: 2 }}
-          />
-        )}
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Detailed analysis of your work patterns, focus time, and productivity trends

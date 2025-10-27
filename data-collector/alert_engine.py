@@ -60,6 +60,7 @@ class AlertEngine:
     
     def __init__(self, rules_file: Path = None):
         self.rules_file = rules_file or Path(__file__).parent / 'alert_rules.json'
+        self.notifications_file = Path(__file__).parent / 'notification_history.json'
         self.rules: Dict[str, AlertRule] = {}
         self.alert_state = defaultdict(lambda: {
             'start_time': None,
@@ -67,6 +68,9 @@ class AlertEngine:
             'alert_count': 0
         })
         self.alert_cooldown = 300  # 5 minutes cooldown between same alerts
+        self.last_rules_check = None
+        self.rules_check_interval = 60  # Check for rule changes every 60 seconds
+        self.max_notifications = 100  # Keep last 100 notifications
         
         # Load rules
         self.load_rules()
@@ -77,15 +81,24 @@ class AlertEngine:
             try:
                 with open(self.rules_file, 'r', encoding='utf-8') as f:
                     rules_data = json.load(f)
+                    self.rules.clear()  # Clear existing rules before loading
                     for rule_data in rules_data:
                         rule = AlertRule.from_dict(rule_data)
                         self.rules[rule.rule_id] = rule
                 logger.info(f"Loaded {len(self.rules)} alert rules")
+                self.last_rules_check = datetime.now()
             except Exception as e:
                 logger.error(f"Error loading alert rules: {e}")
         else:
             # Create default rules
             self.create_default_rules()
+    
+    def reload_rules_if_needed(self):
+        """Reload rules if enough time has passed"""
+        if not self.last_rules_check or \
+           (datetime.now() - self.last_rules_check).total_seconds() >= self.rules_check_interval:
+            logger.info("Reloading alert rules...")
+            self.load_rules()
             
     def save_rules(self):
         """Save alert rules to file"""
@@ -96,6 +109,100 @@ class AlertEngine:
             logger.info(f"Saved {len(self.rules)} alert rules")
         except Exception as e:
             logger.error(f"Error saving alert rules: {e}")
+    
+    def save_notification(self, rule_name: str, message: str, rule_id: str = None):
+        """Save notification to history file"""
+        try:
+            # Load existing notifications
+            notifications = []
+            if self.notifications_file.exists():
+                with open(self.notifications_file, 'r', encoding='utf-8') as f:
+                    notifications = json.load(f)
+            
+            # Add new notification
+            notification_data = {
+                'id': f"{int(datetime.now().timestamp() * 1000)}",
+                'ruleId': rule_id,
+                'ruleName': rule_name,
+                'message': message,
+                'timestamp': datetime.now().isoformat(),
+                'read': False
+            }
+            notifications.insert(0, notification_data)
+            
+            # Keep only last max_notifications
+            notifications = notifications[:self.max_notifications]
+            
+            # Save back to file
+            with open(self.notifications_file, 'w', encoding='utf-8') as f:
+                json.dump(notifications, f, indent=2)
+            
+            logger.debug(f"Saved notification: {rule_name}")
+        except Exception as e:
+            logger.error(f"Error saving notification: {e}")
+    
+    def get_notifications(self, unread_only: bool = False, limit: int = None):
+        """Get notification history"""
+        try:
+            if self.notifications_file.exists():
+                with open(self.notifications_file, 'r', encoding='utf-8') as f:
+                    notifications = json.load(f)
+                    
+                if unread_only:
+                    notifications = [n for n in notifications if not n.get('read', False)]
+                
+                if limit:
+                    notifications = notifications[:limit]
+                    
+                return notifications
+        except Exception as e:
+            logger.error(f"Error loading notifications: {e}")
+        
+        return []
+    
+    def mark_notification_read(self, notification_id: str):
+        """Mark a notification as read"""
+        try:
+            if self.notifications_file.exists():
+                with open(self.notifications_file, 'r', encoding='utf-8') as f:
+                    notifications = json.load(f)
+                
+                # Find and mark as read
+                for notif in notifications:
+                    if notif['id'] == notification_id:
+                        notif['read'] = True
+                        break
+                
+                # Save back
+                with open(self.notifications_file, 'w', encoding='utf-8') as f:
+                    json.dump(notifications, f, indent=2)
+                    
+                return True
+        except Exception as e:
+            logger.error(f"Error marking notification as read: {e}")
+        
+        return False
+    
+    def mark_all_notifications_read(self):
+        """Mark all notifications as read"""
+        try:
+            if self.notifications_file.exists():
+                with open(self.notifications_file, 'r', encoding='utf-8') as f:
+                    notifications = json.load(f)
+                
+                # Mark all as read
+                for notif in notifications:
+                    notif['read'] = True
+                
+                # Save back
+                with open(self.notifications_file, 'w', encoding='utf-8') as f:
+                    json.dump(notifications, f, indent=2)
+                    
+                return True
+        except Exception as e:
+            logger.error(f"Error marking all notifications as read: {e}")
+        
+        return False
             
     def create_default_rules(self):
         """Create default alert rules"""
@@ -235,8 +342,11 @@ class AlertEngine:
                     
         return False
         
-    def send_desktop_notification(self, title: str, message: str):
-        """Send desktop notification"""
+    def send_desktop_notification(self, title: str, message: str, rule_id: str = None):
+        """Send desktop notification and save to history"""
+        # Save to history first
+        self.save_notification(title, message, rule_id)
+        
         if not NOTIFICATIONS_AVAILABLE:
             logger.warning(f"Notification not sent (plyer not installed): {title} - {message}")
             return
@@ -254,6 +364,9 @@ class AlertEngine:
             
     def check_alerts(self, app_tracking: Dict, current_snapshot: Dict = None):
         """Check all alert rules and trigger notifications"""
+        # Reload rules if needed (every 60 seconds)
+        self.reload_rules_if_needed()
+        
         for rule in self.rules.values():
             if not rule.enabled:
                 continue
@@ -262,26 +375,67 @@ class AlertEngine:
             alert_message = ""
             
             if rule.condition_type == 'memory_usage':
-                if rule.target_app and current_snapshot:
-                    # Check specific app memory from current snapshot
+                if current_snapshot:
+                    # Check app memory from current snapshot
                     for app in current_snapshot.get('apps', []):
-                        if app['name'] == rule.target_app:
-                            memory_mb = app.get('memoryUsageMB', 0)
-                            if memory_mb >= rule.threshold:
-                                triggered = True
-                                alert_message = f"'{app['title']}' is using {memory_mb:.0f} MB of memory (threshold: {rule.threshold:.0f} MB)"
+                        app_name = app.get('name', '')
+                        
+                        # Skip if rule targets specific app and this isn't it
+                        if rule.target_app and rule.target_app != app_name:
+                            continue
+                        
+                        # Skip background_apps
+                        if app_name == 'background_apps':
+                            continue
+                        
+                        memory_mb = app.get('memoryUsageMB', 0)
+                        if memory_mb >= rule.threshold:
+                            state_key = f"{rule.rule_id}_{app_name}"
+                            state = self.alert_state[state_key]
+                            
+                            # Check cooldown
+                            if state['last_alert_time']:
+                                time_since_alert = (datetime.now() - state['last_alert_time']).total_seconds()
+                                if time_since_alert < self.alert_cooldown:
+                                    continue
+                            
+                            triggered = True
+                            app_title = app.get('title', app_name)
+                            alert_message = f"'{app_title}' is using {memory_mb:.0f} MB of memory (threshold: {rule.threshold:.0f} MB)"
+                            state['last_alert_time'] = datetime.now()
+                            state['alert_count'] += 1
+                            
+                            # Send notification for this app
+                            self.send_desktop_notification(
+                                title=rule.name,
+                                message=alert_message,
+                                rule_id=rule.rule_id
+                            )
+                            logger.warning(f"Alert triggered: {rule.name} - {alert_message}")
                 else:
-                    # Check system memory
+                    # No snapshot, check system memory as fallback
                     triggered = self.check_memory_usage(rule, app_tracking)
                     if triggered:
                         memory = psutil.virtual_memory()
                         alert_message = f"System memory usage is {memory.percent:.1f}% (threshold: {rule.threshold:.0f}%)"
+                        self.send_desktop_notification(
+                            title=rule.name,
+                            message=alert_message,
+                            rule_id=rule.rule_id
+                        )
+                        logger.warning(f"Alert triggered: {rule.name} - {alert_message}")
                         
             elif rule.condition_type == 'system_overrun':
                 triggered = self.check_system_overrun(rule)
                 if triggered:
                     cpu_percent = psutil.cpu_percent(interval=0)
                     alert_message = f"System CPU usage is {cpu_percent:.1f}% for {rule.duration_minutes} minutes (threshold: {rule.threshold:.0f}%)"
+                    self.send_desktop_notification(
+                        title=rule.name,
+                        message=alert_message,
+                        rule_id=rule.rule_id
+                    )
+                    logger.warning(f"Alert triggered: {rule.name} - {alert_message}")
                     
             elif rule.condition_type == 'app_overrun':
                 # Find apps that match the condition
@@ -310,12 +464,12 @@ class AlertEngine:
                             state['last_alert_time'] = datetime.now()
                             state['alert_count'] += 1
                             
-            if triggered and alert_message:
-                self.send_desktop_notification(
-                    title=rule.name,
-                    message=alert_message
-                )
-                logger.warning(f"Alert triggered: {rule.name} - {alert_message}")
+                            self.send_desktop_notification(
+                                title=rule.name,
+                                message=alert_message,
+                                rule_id=rule.rule_id
+                            )
+                            logger.warning(f"Alert triggered: {rule.name} - {alert_message}")
 
 
 # Singleton instance
