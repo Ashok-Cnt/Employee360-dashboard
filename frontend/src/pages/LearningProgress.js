@@ -41,6 +41,7 @@ import {
   Tabs,
   Tab,
   Pagination,
+  Slider,
 } from '@mui/material';
 import {
   School as SchoolIcon,
@@ -75,12 +76,14 @@ const LearningProgress = () => {
   const [newGoalTarget, setNewGoalTarget] = useState('');
   const [newGoalCourseId, setNewGoalCourseId] = useState('');
   const [newGoalHours, setNewGoalHours] = useState('');
+  const [newGoalProgress, setNewGoalProgress] = useState(0);
   const [editingGoalIndex, setEditingGoalIndex] = useState(null);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editGoalText, setEditGoalText] = useState('');
   const [editGoalTarget, setEditGoalTarget] = useState('');
   const [editGoalCourseId, setEditGoalCourseId] = useState('');
   const [editGoalHours, setEditGoalHours] = useState('');
+  const [editGoalProgress, setEditGoalProgress] = useState(0);
   
   // Pagination and tabs state
   const [goalsTab, setGoalsTab] = useState(0); // 0: In Progress, 1: Completed
@@ -219,6 +222,58 @@ const LearningProgress = () => {
     }
   };
 
+  // Auto-complete goals when linked course reaches 100%
+  const checkAndAutoCompleteGoals = async () => {
+    if (!goals || goals.length === 0) return;
+
+    let hasChanges = false;
+    const updatedGoals = [...goals];
+
+    for (let i = 0; i < updatedGoals.length; i++) {
+      const goal = updatedGoals[i];
+      // Only check goals that are not already completed
+      if (goal.status !== 'completed') {
+        let shouldComplete = false;
+        
+        // Check if linked course is 100% complete
+        if (goal.courseId && allCoursesData?.courses) {
+          const courseCompletion = getCourseCompletion(goal.courseId);
+          if (courseCompletion === 100) {
+            shouldComplete = true;
+          }
+        }
+        
+        // Check if manual progress is 100%
+        if (!goal.courseId && goal.progress === 100) {
+          shouldComplete = true;
+        }
+        
+        if (shouldComplete) {
+          // Auto-complete the goal
+          try {
+            const response = await fetch(`http://127.0.0.1:8001/api/goals/${i}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...goal,
+                status: 'completed'
+              })
+            });
+            if (response.ok) {
+              hasChanges = true;
+            }
+          } catch (err) {
+            console.error('Error auto-completing goal:', err);
+          }
+        }
+      }
+    }
+
+    if (hasChanges) {
+      await fetchGoals();
+    }
+  };
+
   // Add new goal
   const handleAddGoal = async () => {
     if (!newGoalText.trim()) return;
@@ -230,14 +285,19 @@ const LearningProgress = () => {
           goalText: newGoalText,
           targetDate: newGoalTarget || null,
           courseId: newGoalCourseId || null,
-          totalHours: newGoalHours ? parseFloat(newGoalHours) : null
+          totalHours: newGoalHours ? parseFloat(newGoalHours) : null,
+          progress: (newGoalCourseId && newGoalCourseId !== '') ? null : newGoalProgress
         })
       });
       if (!response.ok) throw new Error('Failed to add goal');
+      
+      console.log('Goal added successfully with progress:', newGoalProgress);
+      
       setNewGoalText('');
       setNewGoalTarget('');
       setNewGoalCourseId('');
       setNewGoalHours('');
+      setNewGoalProgress(0);
       setOpenGoalDialog(false);
       fetchGoals();
     } catch (err) {
@@ -268,6 +328,7 @@ const LearningProgress = () => {
     setEditGoalTarget(goal.targetDate || '');
     setEditGoalCourseId(goal.courseId || '');
     setEditGoalHours(goal.totalHours || '');
+    setEditGoalProgress(goal.progress || 0);
     setOpenEditDialog(true);
   };
 
@@ -275,6 +336,10 @@ const LearningProgress = () => {
   const handleUpdateGoal = async () => {
     if (!editGoalText.trim()) return;
     try {
+      // Determine if goal should be marked as completed (progress = 100%)
+      const shouldComplete = !editGoalCourseId && editGoalProgress === 100;
+      const goalStatus = shouldComplete ? 'completed' : 'active';
+      
       const response = await fetch(`http://127.0.0.1:8001/api/goals/${editingGoalIndex}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -282,16 +347,22 @@ const LearningProgress = () => {
           goalText: editGoalText,
           targetDate: editGoalTarget || null,
           courseId: editGoalCourseId || null,
-          totalHours: editGoalHours ? parseFloat(editGoalHours) : null
+          totalHours: editGoalHours ? parseFloat(editGoalHours) : null,
+          progress: (editGoalCourseId && editGoalCourseId !== '') ? null : editGoalProgress,
+          status: goalStatus
         })
       });
       if (!response.ok) throw new Error('Failed to update goal');
+      
+      console.log('Goal updated successfully with progress:', editGoalProgress, 'status:', goalStatus);
+      
       setOpenEditDialog(false);
       setEditingGoalIndex(null);
       setEditGoalText('');
       setEditGoalTarget('');
       setEditGoalCourseId('');
       setEditGoalHours('');
+      setEditGoalProgress(0);
       fetchGoals();
     } catch (err) {
       console.error('Error updating goal:', err);
@@ -329,6 +400,13 @@ const LearningProgress = () => {
     
     // Auto-refresh disabled
   }, [selectedPeriod]);
+
+  // Auto-complete goals when course data is loaded
+  useEffect(() => {
+    if (allCoursesData && goals.length > 0) {
+      checkAndAutoCompleteGoals();
+    }
+  }, [allCoursesData, goals.length]);
 
   const formatHours = (hours) => {
     if (hours < 1) {
@@ -619,16 +697,6 @@ const LearningProgress = () => {
                   opacity: goal.status === 'completed' ? 0.7 : 1
                 }}
               >
-                <IconButton
-                  onClick={() => handleToggleGoal(index, goal.status)}
-                  sx={{ mr: 2 }}
-                >
-                  {goal.status === 'completed' ? (
-                    <CheckCircleIcon color="success" />
-                  ) : (
-                    <RadioButtonUncheckedIcon />
-                  )}
-                </IconButton>
                 <ListItemText
                   primary={goal.goalText}
                   secondary={
@@ -688,28 +756,48 @@ const LearningProgress = () => {
                           )}
                         </Box>
                       )}
+                      {!goal.courseId && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                            <strong>Progress:</strong>
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ minWidth: 40 }}>
+                              {goal.progress || 0}%
+                            </Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={goal.progress || 0}
+                              color={getProgressColor(goal.progress || 0)}
+                              sx={{ flex: 1, height: 6, borderRadius: 1 }}
+                            />
+                          </Box>
+                        </Box>
+                      )}
                     </Box>
                   }
                   sx={{
                     textDecoration: goal.status === 'completed' ? 'line-through' : 'none'
                   }}
                 />
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <IconButton
-                    onClick={() => handleOpenEditDialog(index, goal)}
-                    size="small"
-                    color="primary"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => handleDeleteGoal(index)}
-                    size="small"
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
+                {goal.status !== 'completed' && (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
+                      onClick={() => handleOpenEditDialog(actualIndex, goal)}
+                      size="small"
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleDeleteGoal(actualIndex)}
+                      size="small"
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                )}
               </ListItem>
                 );
               })}
@@ -780,6 +868,28 @@ const LearningProgress = () => {
             InputProps={{ inputProps: { min: 0, step: 0.5 } }}
             sx={{ mb: 2 }}
           />
+          {!newGoalCourseId && (
+            <Box sx={{ mb: 2, px: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom>
+                Progress (%)
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Slider
+                  value={newGoalProgress}
+                  onChange={(e, value) => setNewGoalProgress(value)}
+                  valueLabelDisplay="auto"
+                  step={5}
+                  marks
+                  min={0}
+                  max={100}
+                  sx={{ flex: 1 }}
+                />
+                <Typography variant="body2" sx={{ minWidth: 45 }}>
+                  {newGoalProgress}%
+                </Typography>
+              </Box>
+            </Box>
+          )}
           <TextField
             margin="dense"
             label="Target Date (Optional)"
@@ -841,6 +951,28 @@ const LearningProgress = () => {
             InputProps={{ inputProps: { min: 0, step: 0.5 } }}
             sx={{ mb: 2 }}
           />
+          {!editGoalCourseId && (
+            <Box sx={{ mb: 2, px: 1 }}>
+              <Typography variant="caption" color="text.secondary" gutterBottom>
+                Progress (%)
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Slider
+                  value={editGoalProgress}
+                  onChange={(e, value) => setEditGoalProgress(value)}
+                  valueLabelDisplay="auto"
+                  step={5}
+                  marks
+                  min={0}
+                  max={100}
+                  sx={{ flex: 1 }}
+                />
+                <Typography variant="body2" sx={{ minWidth: 45 }}>
+                  {editGoalProgress}%
+                </Typography>
+              </Box>
+            </Box>
+          )}
           <TextField
             margin="dense"
             label="Target Date (Optional)"

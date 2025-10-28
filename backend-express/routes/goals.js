@@ -41,6 +41,14 @@ async function writeGoals(goals) {
 router.get('/', async (req, res) => {
   try {
     const goals = await readGoals();
+    
+    // Ensure progress field exists for all goals without courseId
+    goals.forEach(goal => {
+      if (!goal.courseId && goal.progress === undefined) {
+        goal.progress = 0;
+      }
+    });
+    
     res.json({ success: true, goals });
   } catch (err) {
     console.error('Error fetching goals:', err);
@@ -51,7 +59,7 @@ router.get('/', async (req, res) => {
 // Add a new goal
 router.post('/', async (req, res) => {
   try {
-    const { userId, goalText, targetDate, courseId, totalHours } = req.body;
+    const { userId, goalText, targetDate, courseId, totalHours, progress } = req.body;
     if (!goalText) return res.status(400).json({ success: false, error: 'Goal text required' });
     
     const goals = await readGoals();
@@ -62,6 +70,7 @@ router.post('/', async (req, res) => {
       targetDate: targetDate || null,
       courseId: courseId || null,
       totalHours: totalHours || null,
+      progress: progress !== undefined ? progress : 0,
       status: 'active'
     };
     goals.push(newGoal);
@@ -76,15 +85,30 @@ router.post('/', async (req, res) => {
 // Update goal status or courseId
 router.put('/:index', async (req, res) => {
   try {
-    const { status, courseId, totalHours, goalText, targetDate } = req.body;
+    const { status, courseId, totalHours, goalText, targetDate, progress } = req.body;
+    console.log('📝 Updating goal at index:', req.params.index);
+    console.log('📝 Received data:', { status, courseId, totalHours, goalText, targetDate, progress });
+    
     const goals = await readGoals();
     const idx = parseInt(req.params.index);
     if (isNaN(idx) || !goals[idx]) return res.status(404).json({ success: false, error: 'Goal not found' });
+    
+    console.log('📝 Current goal before update:', goals[idx]);
+    
     if (status !== undefined) goals[idx].status = status;
     if (courseId !== undefined) goals[idx].courseId = courseId;
     if (totalHours !== undefined) goals[idx].totalHours = totalHours;
     if (goalText !== undefined) goals[idx].goalText = goalText;
     if (targetDate !== undefined) goals[idx].targetDate = targetDate;
+    if (progress !== undefined) goals[idx].progress = progress;
+    
+    // Ensure progress field exists for goals without courseId
+    if (!goals[idx].courseId && goals[idx].progress === undefined) {
+      goals[idx].progress = 0;
+    }
+    
+    console.log('📝 Goal after update:', goals[idx]);
+    
     await writeGoals(goals);
     res.json({ success: true, goal: goals[idx] });
   } catch (err) {
