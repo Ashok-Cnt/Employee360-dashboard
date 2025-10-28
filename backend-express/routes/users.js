@@ -1,16 +1,65 @@
 const express = require('express');
 const os = require('os');
+const { execSync } = require('child_process');
 const router = express.Router();
+
+// Helper function to get Windows user full name
+function getWindowsUserFullName() {
+  try {
+    if (os.platform() === 'win32') {
+      // Try to get full name from Windows
+      const username = process.env.USERNAME || os.userInfo().username;
+      const output = execSync(`wmic useraccount where name="${username}" get fullname /value`, { 
+        encoding: 'utf-8',
+        timeout: 5000 
+      });
+      const match = output.match(/FullName=(.*)/);
+      if (match && match[1] && match[1].trim()) {
+        return match[1].trim();
+      }
+    }
+  } catch (error) {
+    console.log('Could not get Windows full name:', error.message);
+  }
+  return null;
+}
+
+// Helper function to get computer domain
+function getComputerDomain() {
+  try {
+    if (os.platform() === 'win32') {
+      const output = execSync('wmic computersystem get domain /value', { 
+        encoding: 'utf-8',
+        timeout: 5000 
+      });
+      const match = output.match(/Domain=(.*)/);
+      if (match && match[1] && match[1].trim()) {
+        return match[1].trim();
+      }
+    }
+  } catch (error) {
+    console.log('Could not get domain:', error.message);
+  }
+  return null;
+}
 
 // Get system user information (must be before parameterized routes)
 router.get('/system-user', (req, res) => {
   try {
+    const userInfo = os.userInfo();
+    const username = process.env.USERNAME || process.env.USER || userInfo.username;
+    const fullName = getWindowsUserFullName();
+    const domain = getComputerDomain();
+    
     // Get Windows system username
     const systemUser = {
-      username: process.env.USERNAME || process.env.USER || os.userInfo().username,
-      displayName: os.userInfo().username,
+      username: username,
+      displayName: fullName || userInfo.username || username,
+      computerName: os.hostname(),
+      domain: domain || 'WORKGROUP',
       platform: os.platform(),
       hostname: os.hostname(),
+      homedir: userInfo.homedir,
       timestamp: new Date()
     };
     

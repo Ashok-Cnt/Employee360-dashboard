@@ -1549,7 +1549,6 @@ const WorkPatterns = () => {
   const handleHeatmapAccordionView = (hourIndex) => handleHeatmapClick(hourIndex);
   const handleHeatmapStepperView = (hourIndex) => handleHeatmapClick(hourIndex);
 
-
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -1570,9 +1569,11 @@ const WorkPatterns = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Typography variant="h4" gutterBottom>
-        Work Pattern Analysis
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
+          Work Pattern Analysis
+        </Typography>
+      </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Detailed analysis of your work patterns, focus time, and productivity trends
       </Typography>

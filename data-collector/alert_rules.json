@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "ruleId": "default-rule-1",
+    "name": "Application Running Over 10 Hours",
+    "conditionType": "app_overrun",
+    "threshold": 600,
+    "durationMinutes": 600,
+    "enabled": true,
+    "targetApp": null,
+    "description": "Alert when any application runs for more than 10 hours continuously"
+  },
+  {
+    "ruleId": "default-rule-2",
+    "name": "System Not Shutdown More Than 1 Day",
+    "conditionType": "system_overrun",
+    "threshold": 1440,
+    "durationMinutes": 1440,
+    "enabled": true,
+    "targetApp": null,
+    "description": "Alert when system is not shut down for more than 1 day"
+  },
+  {
+    "ruleId": "default-rule-3",
+    "name": "High Memory Usage - Over 5GB",
+    "conditionType": "memory_usage",
+    "threshold": 5000,
+    "durationMinutes": 5,
+    "enabled": true,
+    "targetApp": "",
+    "description": "Alert when any application uses more than 4GB of memory"
+  }
+]

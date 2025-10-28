@@ -1,18 +1,99 @@
 const express = require('express');
 const os = require('os');
+const { execSync } = require('child_process');
 const router = express.Router();
+
+// Helper function to get Windows user full name
+function getWindowsUserFullName() {
+  try {
+    if (os.platform() === 'win32') {
+      // Try to get full name from Windows
+      const username = process.env.USERNAME || os.userInfo().username;
+      const output = execSync(`wmic useraccount where name="${username}" get fullname /value`, { 
+        encoding: 'utf-8',
+        timeout: 5000,
+        windowsHide: true
+      });
+      const match = output.match(/FullName=(.*)/);
+      if (match && match[1] && match[1].trim()) {
+        return match[1].trim();
+      }
+    }
+  } catch (error) {
+    console.log('Could not get Windows full name:', error.message);
+  }
+  // Fallback: Try environment variables
+  return process.env.USERDOMAIN_ROAMINGPROFILE || process.env.USERDOMAIN || null;
+}
+
+// Helper function to get computer domain
+function getComputerDomain() {
+  try {
+    if (os.platform() === 'win32') {
+      const output = execSync('wmic computersystem get domain /value', { 
+        encoding: 'utf-8',
+        timeout: 5000,
+        windowsHide: true
+      });
+      const match = output.match(/Domain=(.*)/);
+      if (match && match[1] && match[1].trim()) {
+        const domain = match[1].trim();
+        // Don't return if it's the same as computer name (means no domain)
+        if (domain && domain.toLowerCase() !== os.hostname().toLowerCase()) {
+          return domain;
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Could not get domain:', error.message);
+  }
+  // Try environment variable
+  return process.env.USERDOMAIN || process.env.USERDNSDOMAIN || 'WORKGROUP';
+}
+
+// Helper function to get user email (if available)
+function getUserEmail() {
+  try {
+    if (os.platform() === 'win32') {
+      const username = process.env.USERNAME || os.userInfo().username;
+      const output = execSync(`powershell -Command "(Get-LocalUser -Name '${username}' -ErrorAction SilentlyContinue).Description"`, {
+        encoding: 'utf-8',
+        timeout: 5000,
+        windowsHide: true
+      });
+      if (output && output.trim() && output.includes('@')) {
+        return output.trim();
+      }
+    }
+  } catch (error) {
+    console.log('Could not get user email:', error.message);
+  }
+  return null;
+}
 
 // Get system user information (must be before parameterized routes)
 router.get('/system-user', (req, res) => {
   try {
+    const userInfo = os.userInfo();
+    const username = process.env.USERNAME || process.env.USER || userInfo.username;
+    const fullName = getWindowsUserFullName();
+    const domain = getComputerDomain();
+    const email = getUserEmail();
+    
     // Get Windows system username
     const systemUser = {
-      username: process.env.USERNAME || process.env.USER || os.userInfo().username,
-      displayName: os.userInfo().username,
+      username: username,
+      displayName: fullName || username,
+      computerName: os.hostname(),
+      domain: domain,
+      email: email,
       platform: os.platform(),
       hostname: os.hostname(),
+      homedir: userInfo.homedir,
       timestamp: new Date()
     };
+    
+    console.log('System user info:', JSON.stringify(systemUser, null, 2));
     
     res.json({
       success: true,

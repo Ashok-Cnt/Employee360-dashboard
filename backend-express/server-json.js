@@ -78,10 +78,44 @@ app.locals.files = {
 // Middleware
 app.use(helmet());
 app.use(morgan('combined'));
+
+// CORS configuration - allow Udemy domains and local origins
 app.use(cors({
-  origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000').split(','),
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:8001',
+      'http://127.0.0.1:8001'
+    ];
+    
+    // Also allow all Udemy domains
+    if (origin.includes('udemy.com')) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    // Check environment variable for additional origins
+    const envOrigins = process.env.ALLOWED_ORIGINS;
+    if (envOrigins && envOrigins.split(',').indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    return callback(null, true); // Allow all for development
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -115,7 +149,8 @@ app.get('/', (req, res) => {
         stats: '/api/udemy-tracker/stats',
         files: '/api/udemy-tracker/files',
         fileData: '/api/udemy-tracker/file/:filename'
-      }
+      },
+       goals: '/api/goals' // New goals endpoint
     }
   });
 });
@@ -126,11 +161,15 @@ const appRoutes = require('./routes/applications-json');
 const aiSuggestionsRoutes = require('./routes/ai-suggestions-json');
 const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL reader router
 const alertsRoutes = require('./routes/alerts');
+const notificationsRoutes = require('./routes/notifications');
 const healthMetricsRoutes = require('./routes/health-metrics-v2'); // Enhanced version with backend logic
 const localStorageRoutes = require('./routes/local-storage');
 const learningProgressRoutes = require('./routes/learning-progress');
 const categoriesRoutes = require('./routes/categories');
 const holidaysRoutes = require('./routes/holidays');
+const udemyCoursesRoutes = require('./routes/udemy-courses'); // New Udemy course details
+const goalsRoutes = require('./routes/goals'); // New goals route
+const userPreferencesRoutes = require('./routes/user-preferences'); // User preferences (display name, reminders)
 
 // ========================================
 // Udemy Tracker Extension Endpoints
@@ -374,11 +413,15 @@ app.use('/api/apps', appRoutes);
 app.use('/api/ai-suggestions', aiSuggestionsRoutes);
 app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/health', healthMetricsRoutes);
 app.use('/api/local-storage', localStorageRoutes);
 app.use('/api/learning-progress', learningProgressRoutes);
+app.use('/api/udemy-courses', udemyCoursesRoutes); // New Udemy course details
+app.use('/api/goals', goalsRoutes); 
 app.use('/api', categoriesRoutes);
 app.use('/api/holidays', holidaysRoutes);
+app.use('/api/preferences', userPreferencesRoutes); // User preferences API
 
 // Error handling middleware
 app.use((err, req, res, next) => {

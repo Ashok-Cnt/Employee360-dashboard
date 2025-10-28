@@ -19,30 +19,33 @@ async function readAlertRules() {
       const defaultRules = [
         {
           ruleId: uuidv4(),
-          name: 'High Memory Usage Alert',
+          name: 'Application Running Over 10 Hours',
+          conditionType: 'app_overrun',
+          threshold: 600, // 10 hours in minutes
+          durationMinutes: 600,
+          enabled: true,
+          targetApp: null,
+          description: 'Alert when any application runs for more than 10 hours continuously'
+        },
+        {
+          ruleId: uuidv4(),
+          name: 'System Not Shutdown More Than 1 Day',
+          conditionType: 'system_overrun',
+          threshold: 1440, // 24 hours in minutes (1 day)
+          durationMinutes: 1440,
+          enabled: true,
+          targetApp: null,
+          description: 'Alert when system is not shut down for more than 1 day'
+        },
+        {
+          ruleId: uuidv4(),
+          name: 'High Memory Usage - Over 4GB',
           conditionType: 'memory_usage',
-          threshold: 80.0,
+          threshold: 4096, // 4 GB in MB
           durationMinutes: 5,
           enabled: true,
-          targetApp: null
-        },
-        {
-          ruleId: uuidv4(),
-          name: 'System Overrun Alert',
-          conditionType: 'system_overrun',
-          threshold: 90.0,
-          durationMinutes: 10,
-          enabled: true,
-          targetApp: null
-        },
-        {
-          ruleId: uuidv4(),
-          name: 'Application Running But Not Used',
-          conditionType: 'app_overrun',
-          threshold: 120,
-          durationMinutes: 120,
-          enabled: true,
-          targetApp: null
+          targetApp: null,
+          description: 'Alert when any application uses more than 4GB of memory'
         }
       ];
       await writeAlertRules(defaultRules);

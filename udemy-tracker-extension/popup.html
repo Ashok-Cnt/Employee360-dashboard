@@ -202,6 +202,29 @@
       text-decoration: none;
     }
 
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: #f0f0f0;
+      color: #333;
+    }
+
     .loader {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #5624d0;
@@ -219,6 +242,8 @@
   </style>
 </head>
 <body>
+  <button class="close-btn" id="closeBtn" title="Close">×</button>
+  
   <div class="header">
     <h1>🎓 Udemy Progress Tracker</h1>
     <p>for Employee360 Dashboard</p>

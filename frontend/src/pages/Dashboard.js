@@ -21,6 +21,12 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  ListItemSecondaryAction,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -41,6 +47,14 @@ import {
   BatteryAlert,
   Refresh as RefreshIcon,
   Event as EventIcon,
+  BeachAccess as LeaveIcon,
+  NotificationsActive as ReminderIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
+  AccessTime,
+  Assignment,
+  DirectionsRun,
+  Functions,
 } from '@mui/icons-material';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
@@ -93,6 +107,26 @@ const Dashboard = () => {
   const [coursesDialogOpen, setCoursesDialogOpen] = React.useState(false);
   const [batteryDialogOpen, setBatteryDialogOpen] = React.useState(false);
   const [holidaysDialogOpen, setHolidaysDialogOpen] = React.useState(false);
+  const [leaveDaysDialogOpen, setLeaveDaysDialogOpen] = React.useState(false);
+  const [leaveDaysData, setLeaveDaysData] = React.useState([]);
+  const [leaveDaysLoading, setLeaveDaysLoading] = React.useState(false);
+  const [coursesData, setCoursesData] = React.useState([]);
+  const [coursesLoading, setCoursesLoading] = React.useState(false);
+  
+  // Reminder state
+  const [reminderDialogOpen, setReminderDialogOpen] = React.useState(false);
+  const [reminders, setReminders] = React.useState([]);
+  const [newReminderDialogOpen, setNewReminderDialogOpen] = React.useState(false);
+  const [newReminder, setNewReminder] = React.useState({
+    type: 'task',
+    title: '',
+    description: '',
+    time: '',
+    date: '',
+  });
+  
+  // Custom display name state
+  const [customDisplayName, setCustomDisplayName] = React.useState('');
   
   // Get system user (Windows login user) from Redux store
   const systemUser = useSelector((state) => state.user.systemUser);
@@ -136,6 +170,270 @@ const Dashboard = () => {
     }
   }, []);
 
+  // Fetch leave days data
+  const fetchLeaveDays = React.useCallback(async () => {
+    setLeaveDaysLoading(true);
+    try {
+      // Fetch available dates
+      const datesResponse = await fetch('/api/activity/available-dates');
+      if (!datesResponse.ok) {
+        throw new Error('Failed to fetch available dates');
+      }
+      const datesData = await datesResponse.json();
+      const dates = datesData.dates || [];
+      
+      // Get today's date for comparison
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch data for each date and check if it's a leave day
+      const leaveDays = [];
+      for (const date of dates) {
+        // Skip today's date - only analyze past days
+        if (date === today) {
+          continue;
+        }
+        
+        // Check if it's a weekend (Saturday = 6, Sunday = 0)
+        const dateObj = new Date(date + 'T00:00:00');
+        const dayOfWeek = dateObj.getDay();
+        
+        // Skip weekends (Saturday and Sunday)
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          continue;
+        }
+        
+        try {
+          const response = await fetch(`/api/activity/daily-summary/${date}`);
+          if (response.ok) {
+            const data = await response.json();
+            const runningHours = data.system?.aggregates?.overallMonitoringHours || 0;
+            
+            // Check if it's a leave day (< 3 hours and > 0)
+            if (runningHours > 0 && runningHours < 3) {
+              leaveDays.push({
+                date,
+                runningHours,
+                month: dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                monthKey: dateObj.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit' }),
+                dayOfWeek: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+                formattedDate: dateObj.toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })
+              });
+            }
+          }
+        } catch (err) {
+          console.warn(`Error fetching data for ${date}:`, err);
+        }
+      }
+      
+      setLeaveDaysData(leaveDays);
+    } catch (err) {
+      console.error('Error fetching leave days:', err);
+      setLeaveDaysData([]);
+    } finally {
+      setLeaveDaysLoading(false);
+    }
+  }, []);
+
+  // Fetch courses data
+  const fetchCourses = React.useCallback(async () => {
+    setCoursesLoading(true);
+    try {
+      // Use the same endpoint as Learning Progress page
+      const statsResponse = await fetch('http://localhost:8001/api/udemy-courses/stats?days=365');
+      
+      if (!statsResponse.ok) {
+        console.warn('Learning stats endpoint not available');
+        setCoursesData([]);
+        return;
+      }
+      
+      const statsData = await statsResponse.json();
+      
+      // Check if response has the expected structure
+      if (statsData.error || !statsData.stats) {
+        console.warn('Learning stats endpoint returned error or invalid data');
+        setCoursesData([]);
+        return;
+      }
+      
+      // Extract stats
+      const stats = statsData.stats;
+      const completedCount = stats.completedCourses || 0;
+      const totalCount = stats.totalCourses || 0;
+      
+      // If we have course data, create a summary
+      if (totalCount > 0) {
+        // Get top courses for display
+        const topCourses = stats.topCourses || [];
+        
+        // Create course entries from top courses
+        const courseEntries = topCourses.map(course => ({
+          _id: course.courseId,
+          course_title: course.courseName,
+          provider: course.platform || 'Udemy',
+          completion_date: new Date().toISOString(),
+          duration_hours: 0,
+          skill_tags: [],
+          certificate_url: null,
+          progress: course.maxProgress || 0,
+          isCompleted: course.maxProgress === 100
+        }));
+        
+        // Add a summary entry at the beginning
+        setCoursesData([
+          {
+            _id: 'summary',
+            course_title: 'Learning Progress Summary',
+            provider: 'Multiple Providers',
+            completion_date: new Date().toISOString(),
+            duration_hours: 0,
+            skill_tags: [],
+            certificate_url: null,
+            isSummary: true,
+            totalCount: totalCount,
+            completedCount: completedCount,
+            daysWithLearning: stats.totalDaysWithLearning || 0
+          },
+          ...courseEntries
+        ]);
+      } else {
+        setCoursesData([]);
+      }
+    } catch (err) {
+      console.error('Error fetching courses:', err);
+      setCoursesData([]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  }, []);
+
+  // Load reminders from API
+  React.useEffect(() => {
+    const fetchUserPreferences = async () => {
+      try {
+        const response = await fetch('http://localhost:8001/api/preferences/current/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            // Load reminders
+            if (data.preferences.reminders) {
+              setReminders(data.preferences.reminders);
+            }
+            // Load custom display name (always set, defaults to username)
+            setCustomDisplayName(data.preferences.customDisplayName || '');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user preferences:', error);
+      }
+    };
+    
+    fetchUserPreferences();
+  }, []);
+
+  // Add new reminder
+  const handleAddReminder = async () => {
+    if (!newReminder.title.trim()) {
+      alert('Please enter a reminder title');
+      return;
+    }
+
+    try {
+      const username = systemUser?.username;
+      if (!username) {
+        console.error('No username available');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8001/api/preferences/${username}/reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReminder)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReminders(data.reminders);
+          
+          // Reset form
+          setNewReminder({
+            type: 'task',
+            title: '',
+            description: '',
+            time: '',
+            date: '',
+          });
+          setNewReminderDialogOpen(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding reminder:', error);
+    }
+  };
+
+  // Delete reminder
+  const handleDeleteReminder = async (id) => {
+    try {
+      const username = systemUser?.username;
+      if (!username) {
+        console.error('No username available');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8001/api/preferences/${username}/reminders/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setReminders(data.reminders);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting reminder:', error);
+    }
+  };
+
+  // Get reminder count
+  const getReminderCount = () => {
+    return reminders.length;
+  };
+
+  // Get reminder type icon
+  const getReminderIcon = (type) => {
+    switch (type) {
+      case 'task':
+        return <Assignment />;
+      case 'activity':
+        return <DirectionsRun />;
+      case 'function':
+        return <Functions />;
+      default:
+        return <ReminderIcon />;
+    }
+  };
+
+  // Get reminder type color
+  const getReminderTypeColor = (type) => {
+    switch (type) {
+      case 'task':
+        return 'primary';
+      case 'activity':
+        return 'success';
+      case 'function':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
   // Fetch application activity data and system user on mount
   useEffect(() => {
     // Fetch system user information
@@ -143,12 +441,14 @@ const Dashboard = () => {
     
     fetchData();
     fetchHolidays();
+    fetchLeaveDays(); // Auto-fetch leave days on page load
+    fetchCourses(); // Auto-fetch courses on page load
     
     // Set up periodic refresh every 30 seconds for Dashboard
     const interval = setInterval(fetchData, 30000);
     
     return () => clearInterval(interval);
-  }, [dispatch, fetchData, fetchHolidays]);
+  }, [dispatch, fetchData, fetchHolidays, fetchLeaveDays, fetchCourses]);
   
   // Get greeting message with Windows system username
   const getGreeting = () => {
@@ -158,8 +458,8 @@ const Dashboard = () => {
     else if (hour < 18) timeGreeting = 'Good afternoon';
     else timeGreeting = 'Good evening';
     
-    // Use Windows system login username with fallback
-    const displayName = systemUser?.displayName || systemUser?.username || 'User';
+    // Use custom display name from state (fetched from API), or fallback to system name
+    const displayName = customDisplayName || systemUser?.displayName || systemUser?.username || 'User';
     return `${timeGreeting}, ${displayName}`;
   };
 
@@ -233,6 +533,44 @@ const Dashboard = () => {
   // Get idle hours
   const getIdleHours = () => {
     return activityData?.system?.aggregates?.idleHours || 0;
+  };
+
+  // Get leave days count
+  const getLeaveDaysCount = () => {
+    return leaveDaysData.length;
+  };
+
+  // Get courses completed count
+  const getCoursesCount = () => {
+    if (coursesData.length === 0) return 0;
+    
+    // Check if we have a summary object with completed count
+    const summary = coursesData.find(c => c.isSummary);
+    if (summary) {
+      return summary.completedCount || 0;
+    }
+    
+    // Count completed courses from the list
+    return coursesData.filter(c => c.isCompleted).length;
+  };
+
+  // Get leave days grouped by month
+  const getLeaveDaysByMonth = () => {
+    const grouped = {};
+    leaveDaysData.forEach(day => {
+      if (!grouped[day.monthKey]) {
+        grouped[day.monthKey] = {
+          month: day.month,
+          days: []
+        };
+      }
+      grouped[day.monthKey].days.push(day);
+    });
+    
+    // Sort by month (newest first) and return array
+    return Object.keys(grouped)
+      .sort((a, b) => b.localeCompare(a))
+      .map(key => grouped[key]);
   };
 
   // Get battery information
@@ -344,8 +682,17 @@ const Dashboard = () => {
         </Box>
       )}
       
-      {/* Metric Cards */}
-  <Grid container spacing={2} sx={{ mb: 2 }}>
+      {/* Row 1: Primary Metrics */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            title="Productivity Score"
+            value={`${getProductivityScore()}%`}
+            icon={<TrendingUp />}
+            color="#4caf50"
+            onClick={() => setProductivityScoreDialogOpen(true)}
+          />
+        </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Active Applications"
@@ -357,11 +704,33 @@ const Dashboard = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
-            title="Productivity Score"
-            value={`${getProductivityScore()}%`}
-            icon={<TrendingUp />}
+            title="Monitoring Hours"
+            value={`${getMonitoringHours().toFixed(1)}h`}
+            icon={<Schedule />}
+            color="#e91e63"
+            onClick={() => setMonitoringHoursDialogOpen(true)}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            title="Productive Hours"
+            value={`${getProductiveHours().toFixed(2)}h`}
+            icon={<Work />}
             color="#4caf50"
-            onClick={() => setProductivityScoreDialogOpen(true)}
+            onClick={() => setProductiveHoursDialogOpen(true)}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Row 2: Time & Resources */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            title="Idle Hours"
+            value={`${getIdleHours().toFixed(2)}h`}
+            icon={<Coffee />}
+            color="#ff9800"
+            onClick={() => setIdleHoursDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -375,42 +744,33 @@ const Dashboard = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
-            title="Monitoring Hours"
-            value={`${getMonitoringHours().toFixed(1)}h`}
-            icon={<Schedule />}
-            color="#e91e63"
-            onClick={() => setMonitoringHoursDialogOpen(true)}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Additional Info Cards */}
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricCard
-            title="Productive Hours"
-            value={`${getProductiveHours().toFixed(2)}h`}
-            icon={<Work />}
-            color="#4caf50"
-            onClick={() => setProductiveHoursDialogOpen(true)}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <MetricCard
-            title="Idle Hours"
-            value={`${getIdleHours().toFixed(2)}h`}
-            icon={<Coffee />}
-            color="#ff9800"
-            onClick={() => setIdleHoursDialogOpen(true)}
+            title="Leave Days"
+            value={leaveDaysLoading ? '...' : getLeaveDaysCount()}
+            icon={<LeaveIcon />}
+            color="#9c27b0"
+            onClick={() => setLeaveDaysDialogOpen(true)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Courses Completed"
-            value="12"
+            value={coursesLoading ? '...' : getCoursesCount()}
             icon={<School />}
             color="#ff9800"
             onClick={() => setCoursesDialogOpen(true)}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Row 3: Additional Info */}
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            title="Reminders"
+            value={getReminderCount()}
+            icon={<ReminderIcon />}
+            color="#00bcd4"
+            onClick={() => setReminderDialogOpen(true)}
           />
         </Grid>
         
@@ -1564,187 +1924,250 @@ const Dashboard = () => {
         fullWidth
       >
         <DialogTitle>
-          Learning Progress - 12 Courses Completed
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Learning Progress - {getCoursesCount()} Courses Completed
+            <Tooltip title="Refresh courses data">
+              <IconButton onClick={fetchCourses} disabled={coursesLoading} size="small">
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </DialogTitle>
         <DialogContent>
-          <Box>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Your Learning Journey
-              </Typography>
-              <Typography variant="h3" sx={{ mb: 2, color: '#ff9800' }}>
-                12 Courses
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total courses completed this quarter
-              </Typography>
+          {coursesLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+              <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>Loading courses...</Typography>
             </Box>
+          ) : coursesData.length > 0 ? (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Your Learning Journey
+                </Typography>
+                <Typography variant="h3" sx={{ mb: 2, color: '#ff9800' }}>
+                  {getCoursesCount()} Courses Completed
+                </Typography>
+                {(() => {
+                  const summary = coursesData.find(c => c.isSummary);
+                  if (summary && summary.totalCount > summary.completedCount) {
+                    return (
+                      <Typography variant="body2" color="text.secondary">
+                        {summary.totalCount - summary.completedCount} courses in progress
+                      </Typography>
+                    );
+                  }
+                  return (
+                    <Typography variant="body2" color="text.secondary">
+                      Total courses completed
+                    </Typography>
+                  );
+                })()}
+              </Box>
 
-            <Divider sx={{ mb: 3 }} />
+              <Divider sx={{ mb: 3 }} />
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Recent Completions
-              </Typography>
-              <List>
-                <ListItem>
-                  <ListItemText
-                    primary="Advanced React Patterns"
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" display="block">
-                          Completed: October 15, 2025
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Your Courses
+                </Typography>
+                {(() => {
+                  // Check if we have a summary object
+                  const summary = coursesData.find(c => c.isSummary);
+                  const actualCourses = coursesData.filter(c => !c.isSummary);
+                  
+                  if (summary && actualCourses.length === 0) {
+                    // Show summary info when no detailed courses available
+                    return (
+                      <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="h4" sx={{ color: '#ff9800', mb: 2 }}>
+                          {summary.totalCount} Courses
                         </Typography>
-                        <Typography variant="caption" display="block">
-                          Category: Frontend Development
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          Completed: <strong>{summary.completedCount}</strong>
                         </Typography>
-                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          In Progress: <strong>{summary.totalCount - summary.completedCount}</strong>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Days with learning activity: <strong>{summary.daysWithLearning}</strong>
+                        </Typography>
                       </Box>
-                    }
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem>
-                  <ListItemText
-                    primary="Python Data Analytics"
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" display="block">
-                          Completed: October 10, 2025
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Category: Data Science
-                        </Typography>
-                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem>
-                  <ListItemText
-                    primary="AWS Cloud Architecture"
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" display="block">
-                          Completed: October 5, 2025
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Category: Cloud Computing
-                        </Typography>
-                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem>
-                  <ListItemText
-                    primary="Node.js Performance Optimization"
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" display="block">
-                          Completed: September 28, 2025
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Category: Backend Development
-                        </Typography>
-                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem>
-                  <ListItemText
-                    primary="UI/UX Design Fundamentals"
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" display="block">
-                          Completed: September 20, 2025
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Category: Design
-                        </Typography>
-                        <Chip label="Certificate Earned" size="small" color="success" sx={{ mt: 0.5 }} />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              </List>
-            </Box>
+                    );
+                  }
+                  
+                  // Show actual course list
+                  return (
+                    <List>
+                      {actualCourses.map((course, index) => (
+                        <React.Fragment key={course._id || index}>
+                          <ListItem>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                    {course.course_title || course.title || 'Untitled Course'}
+                                  </Typography>
+                                  {course.isCompleted && (
+                                    <Chip 
+                                      label="Completed" 
+                                      size="small" 
+                                      color="success"
+                                      sx={{ fontSize: '0.7rem' }}
+                                    />
+                                  )}
+                                  {!course.isCompleted && course.progress !== undefined && (
+                                    <Chip 
+                                      label={`${course.progress}% Complete`} 
+                                      size="small" 
+                                      color="primary"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem' }}
+                                    />
+                                  )}
+                                </Box>
+                              }
+                              secondary={
+                                <Box>
+                                  {course.provider && (
+                                    <Typography variant="caption" display="block">
+                                      🏫 Provider: {course.provider}
+                                    </Typography>
+                                  )}
+                                  {course.progress !== undefined && (
+                                    <Box sx={{ mt: 1 }}>
+                                      <Box sx={{ 
+                                        width: '100%', 
+                                        height: 8, 
+                                        backgroundColor: '#e0e0e0',
+                                        borderRadius: 1,
+                                        overflow: 'hidden'
+                                      }}>
+                                        <Box sx={{ 
+                                          width: `${course.progress}%`,
+                                          height: '100%',
+                                          backgroundColor: course.isCompleted ? '#4caf50' : '#2196f3',
+                                          transition: 'width 0.3s'
+                                        }} />
+                                      </Box>
+                                    </Box>
+                                  )}
+                                  {course.completion_date && course.isCompleted && (
+                                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                      📅 Completed: {new Date(course.completion_date).toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                      })}
+                                    </Typography>
+                                  )}
+                                  {course.skill_tags && course.skill_tags.length > 0 && (
+                                    <Box sx={{ mt: 0.5, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                      {course.skill_tags.map((tag, idx) => (
+                                        <Chip 
+                                          key={idx}
+                                          label={tag} 
+                                          size="small" 
+                                          variant="outlined"
+                                          sx={{ fontSize: '0.7rem' }}
+                                        />
+                                      ))}
+                                    </Box>
+                                  )}
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                          {index < actualCourses.length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  );
+                })()}
+              </Box>
 
-            <Divider sx={{ mb: 3 }} />
+              <Divider sx={{ mb: 3 }} />
 
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Learning Statistics
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">
-                    📚 <strong>Courses This Quarter</strong>
-                  </Typography>
-                  <Typography variant="body2" color="primary">
-                    12 / 15 (80%)
-                  </Typography>
-                </Box>
-                <Box sx={{ 
-                  width: '100%', 
-                  height: 12, 
-                  backgroundColor: '#e0e0e0',
-                  borderRadius: 1,
-                  overflow: 'hidden'
-                }}>
-                  <Box sx={{ 
-                    width: '80%',
-                    height: '100%',
-                    backgroundColor: '#ff9800',
-                    transition: 'width 0.3s'
-                  }} />
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  3 more to reach your quarterly goal
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Learning Statistics
+                </Typography>
+                
+                {(() => {
+                  const summary = coursesData.find(c => c.isSummary);
+                  const actualCourses = coursesData.filter(c => !c.isSummary);
+                  
+                  const completedCount = summary 
+                    ? summary.completedCount || 0
+                    : actualCourses.filter(c => c.isCompleted).length;
+                  
+                  const totalCount = summary 
+                    ? summary.totalCount || 0
+                    : actualCourses.length;
+                  
+                  const inProgressCount = totalCount - completedCount;
+                  
+                  return (
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Completed
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: '#4caf50' }}>
+                          {completedCount}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          In Progress
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: '#2196f3' }}>
+                          {inProgressCount}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Courses
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: '#ff9800' }}>
+                          {totalCount}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })()}
+              </Box>
+
+              <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 2, border: '1px solid #2196f3' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  🎯 Keep Learning!
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {(() => {
+                    const summary = coursesData.find(c => c.isSummary);
+                    if (summary) {
+                      const inProgress = summary.totalCount - summary.completedCount;
+                      if (inProgress > 0) {
+                        return `You've completed ${summary.completedCount} courses and have ${inProgress} in progress. Keep going!`;
+                      }
+                      return `You've completed ${summary.completedCount} courses. Start a new course to continue learning!`;
+                    }
+                    return `Continue your learning journey to enhance your skills!`;
+                  })()}
                 </Typography>
               </Box>
-
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
-                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Hours
-                  </Typography>
-                  <Typography variant="h5" sx={{ color: '#ff9800' }}>
-                    48 hours
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Certificates
-                  </Typography>
-                  <Typography variant="h5" sx={{ color: '#4caf50' }}>
-                    12
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 200, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Avg. Score
-                  </Typography>
-                  <Typography variant="h5" sx={{ color: '#2196f3' }}>
-                    92%
-                  </Typography>
-                </Box>
-              </Box>
             </Box>
-
-            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 2, border: '1px solid #2196f3' }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                🎯 Keep Learning!
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <School sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                No Courses Yet
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                You're 80% towards your quarterly learning goal. Complete 3 more courses to achieve 100% and earn a bonus badge!
+                Start your learning journey by completing courses and they will appear here.
               </Typography>
             </Box>
-          </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCoursesDialogOpen(false)} color="primary">
@@ -2116,6 +2539,302 @@ const Dashboard = () => {
         <DialogActions>
           <Button onClick={() => setHolidaysDialogOpen(false)} color="primary">
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Leave Days Dialog */}
+      <Dialog 
+        open={leaveDaysDialogOpen} 
+        onClose={() => setLeaveDaysDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <LeaveIcon sx={{ mr: 1, color: '#9c27b0' }} />
+              Leave Days (Less than 3 hours)
+            </Box>
+            <Button 
+              variant="outlined" 
+              size="small"
+              onClick={fetchLeaveDays}
+              disabled={leaveDaysLoading}
+              startIcon={leaveDaysLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
+            >
+              {leaveDaysLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {leaveDaysLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                Analyzing activity data...
+              </Typography>
+            </Box>
+          ) : leaveDaysData.length > 0 ? (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <strong>{getLeaveDaysCount()} day(s)</strong> detected with running time less than 3 hours
+                <br />
+                <Typography variant="caption">
+                  (Weekends are automatically excluded from leave day calculation)
+                </Typography>
+              </Alert>
+              
+              {getLeaveDaysByMonth().map((monthData, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2, bgcolor: '#f5f5f5' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#9c27b0', mb: 2 }}>
+                    📅 {monthData.month}
+                  </Typography>
+                  <List dense>
+                    {monthData.days.map((day, dayIndex) => (
+                      <React.Fragment key={dayIndex}>
+                        {dayIndex > 0 && <Divider />}
+                        <ListItem>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Typography variant="body1">
+                                  🏖️ {day.formattedDate}
+                                </Typography>
+                                <Chip 
+                                  label={`${day.runningHours.toFixed(1)}h`}
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="caption" color="textSecondary">
+                                Running time: {day.runningHours.toFixed(2)} hours (Less than 3 hours threshold)
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      </React.Fragment>
+                    ))}
+                  </List>
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="textSecondary">
+                      Total: {monthData.days.length} day(s)
+                    </Typography>
+                    <Chip 
+                      label={`${monthData.days.reduce((sum, d) => sum + d.runningHours, 0).toFixed(1)}h total`}
+                      size="small"
+                      variant="filled"
+                      sx={{ bgcolor: '#f3e5f5' }}
+                    />
+                  </Box>
+                </Paper>
+              ))}
+            </>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <LeaveIcon sx={{ fontSize: 64, color: '#e0e0e0', mb: 2 }} />
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                No Leave Days Found
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                All recorded weekdays have 3 or more hours of activity
+              </Typography>
+              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
+                (Weekends are automatically excluded)
+              </Typography>
+              <Button 
+                variant="contained" 
+                sx={{ mt: 2 }}
+                onClick={fetchLeaveDays}
+                startIcon={<RefreshIcon />}
+              >
+                Scan for Leave Days
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeaveDaysDialogOpen(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reminders Dialog */}
+      <Dialog 
+        open={reminderDialogOpen} 
+        onClose={() => setReminderDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">My Reminders</Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setNewReminderDialogOpen(true)}
+            >
+              Add Reminder
+            </Button>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {reminders.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <ReminderIcon sx={{ fontSize: 64, color: '#e0e0e0', mb: 2 }} />
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                No Reminders Yet
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Click "Add Reminder" to create your first reminder
+              </Typography>
+            </Box>
+          ) : (
+            <List>
+              {reminders.map((reminder, index) => (
+                <React.Fragment key={reminder.id}>
+                  {index > 0 && <Divider />}
+                  <ListItem>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                      <Box sx={{ mr: 2, mt: 0.5, color: '#00bcd4' }}>
+                        {getReminderIcon(reminder.type)}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {reminder.title}
+                          </Typography>
+                          <Chip 
+                            label={reminder.type} 
+                            size="small" 
+                            color={getReminderTypeColor(reminder.type)}
+                            variant="outlined"
+                          />
+                        </Box>
+                        {reminder.description && (
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                            {reminder.description}
+                          </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                          {reminder.date && (
+                            <Typography variant="caption" color="textSecondary">
+                              📅 {new Date(reminder.date).toLocaleDateString()}
+                            </Typography>
+                          )}
+                          {reminder.time && (
+                            <Typography variant="caption" color="textSecondary">
+                              🕐 {reminder.time}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      <ListItemSecondaryAction>
+                        <IconButton 
+                          edge="end" 
+                          onClick={() => handleDeleteReminder(reminder.id)}
+                          color="error"
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </Box>
+                  </ListItem>
+                </React.Fragment>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReminderDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add New Reminder Dialog */}
+      <Dialog 
+        open={newReminderDialogOpen} 
+        onClose={() => setNewReminderDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add New Reminder</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Reminder Type</InputLabel>
+              <Select
+                value={newReminder.type}
+                label="Reminder Type"
+                onChange={(e) => setNewReminder({ ...newReminder, type: e.target.value })}
+              >
+                <MenuItem value="task">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Assignment /> Task Reminder
+                  </Box>
+                </MenuItem>
+                <MenuItem value="activity">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DirectionsRun /> Activity Reminder
+                  </Box>
+                </MenuItem>
+                <MenuItem value="function">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Functions /> Function Reminder
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Title"
+              fullWidth
+              required
+              value={newReminder.title}
+              onChange={(e) => setNewReminder({ ...newReminder, title: e.target.value })}
+              placeholder="Enter reminder title"
+            />
+
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={newReminder.description}
+              onChange={(e) => setNewReminder({ ...newReminder, description: e.target.value })}
+              placeholder="Enter reminder description (optional)"
+            />
+
+            <TextField
+              label="Date"
+              type="date"
+              fullWidth
+              value={newReminder.date}
+              onChange={(e) => setNewReminder({ ...newReminder, date: e.target.value })}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+
+            <TextField
+              label="Time"
+              type="time"
+              fullWidth
+              value={newReminder.time}
+              onChange={(e) => setNewReminder({ ...newReminder, time: e.target.value })}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewReminderDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleAddReminder} variant="contained">
+            Add Reminder
           </Button>
         </DialogActions>
       </Dialog>
