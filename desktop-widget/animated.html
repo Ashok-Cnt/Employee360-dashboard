@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+    }
+    .ai-icon {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .brain {
+      width: 50px;
+      height: 50px;
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+    }
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      opacity: 0;
+      animation: particle-float 2s ease-in-out infinite;
+    }
+    .particle:nth-child(1) {
+      top: 10px;
+      left: 10px;
+      animation-delay: 0s;
+    }
+    .particle:nth-child(2) {
+      top: 10px;
+      right: 10px;
+      animation-delay: 0.5s;
+    }
+    .particle:nth-child(3) {
+      bottom: 10px;
+      left: 15px;
+      animation-delay: 1s;
+    }
+    .particle:nth-child(4) {
+      bottom: 10px;
+      right: 15px;
+      animation-delay: 1.5s;
+    }
+    .robot-face {
+      fill: white;
+      animation: pulse-face 2s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+    @keyframes particle-float {
+      0% {
+        opacity: 0;
+        transform: translateY(0px) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(-15px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.5);
+      }
+    }
+    @keyframes pulse-face {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ai-icon">
+    <svg class="brain" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Robot/AI Head -->
+      <g class="robot-face">
+        <!-- Head -->
+        <rect x="25" y="30" width="50" height="45" rx="8" fill="white" opacity="0.9"/>
+        
+        <!-- Eyes -->
+        <circle cx="40" cy="50" r="5" fill="#667eea"/>
+        <circle cx="60" cy="50" r="5" fill="#667eea"/>
+        
+        <!-- Antenna -->
+        <line x1="50" y1="30" x2="50" y2="20" stroke="white" stroke-width="2"/>
+        <circle cx="50" cy="18" r="3" fill="white"/>
+        
+        <!-- Mouth -->
+        <path d="M 38 62 Q 50 68 62 62" stroke="#667eea" stroke-width="2" fill="none"/>
+        
+        <!-- Circuit lines -->
+        <line x1="30" y1="45" x2="35" y2="45" stroke="#764ba2" stroke-width="1" opacity="0.5"/>
+        <line x1="65" y1="45" x2="70" y2="45" stroke="#764ba2" stroke-width="1" opacity="0.5"/>
+      </g>
+    </svg>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+</body>
+</html>

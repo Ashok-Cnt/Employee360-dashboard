@@ -10,6 +10,7 @@ import WorkPatterns from './pages/WorkPatterns';
 import LearningProgress from './pages/LearningProgress';
 import HealthMetrics from './pages/HealthMetrics';
 import AIInsights from './pages/AIInsights';
+import Configuration from './pages/Configuration';
 import ApplicationActivity from './pages/ApplicationActivity';
 import AlertRules from './pages/AlertRules';
 import CategoryConfiguration from './pages/CategoryConfiguration';
@@ -111,6 +112,7 @@ function App() {
           <Route path="/learning" element={<LearningProgress currentUser={currentUser} />} />
           <Route path="/health" element={<HealthMetrics currentUser={currentUser} />} />
           <Route path="/insights" element={<AIInsights currentUser={currentUser} />} />
+          <Route path="/configuration" element={<Configuration />} />
           <Route path="/application-activity" element={<ApplicationActivity />} />
           <Route path="/alert-rules" element={<AlertRules />} />
           <Route path="/category-configuration" element={<CategoryConfiguration />} />

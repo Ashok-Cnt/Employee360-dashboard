@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 // Configuration - supports both Ollama and OpenAI
 const AI_PROVIDER = process.env.AI_PROVIDER || 'ollama'; // 'ollama' or 'openai'
@@ -14,30 +16,6 @@ if (AI_PROVIDER === 'openai') {
   openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-}
-
-// Helper function to get current active user
-async function getCurrentActiveUser(db) {
-  try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const recentActivity = await db.collection('application_activity')
-      .findOne(
-        { timestamp: { $gte: fiveMinutesAgo } },
-        { sort: { timestamp: -1 } }
-      );
-    
-    if (recentActivity) {
-      return recentActivity.user_id;
-    }
-    
-    const latestActivity = await db.collection('application_activity')
-      .findOne({}, { sort: { timestamp: -1 } });
-    
-    return latestActivity ? latestActivity.user_id : 'Admin';
-  } catch (error) {
-    console.error('Error getting current active user:', error);
-    return 'Admin';
-  }
 }
 
 // Function to call Ollama API
@@ -92,11 +70,8 @@ async function callAI(prompt, systemPrompt) {
 // Generate AI-powered suggestions based on work patterns
 router.post('/generate', async (req, res) => {
   try {
-    const db = req.app.locals.db();
-    const userId = req.body.user_id || await getCurrentActiveUser(db);
-    
     // Get work patterns data from request body
-    const { workPatterns, appStats, focusedWindow, currentApps } = req.body;
+    const { workPatterns, appStats, focusedWindow, currentApps, leaveDays, courses, battery, memory, productivityScore } = req.body;
 
     // Validate that we have the necessary data
     if (!workPatterns || !workPatterns.metrics) {
@@ -121,7 +96,7 @@ router.post('/generate', async (req, res) => {
       focusTimePercentage: metrics.focus_time_percentage,
       meetingTimePercentage: metrics.meeting_time_percentage,
       breakTimePercentage: metrics.break_time_percentage,
-      productivityScore: metrics.productivity_score,
+      productivityScore: productivityScore || metrics.productivity_score,
       uniqueApplications: appStats?.unique_applications || 0,
       currentlyActiveApps: currentApps?.length || 0,
       focusedApp: focusedWindow?.application || 'None',
@@ -130,10 +105,28 @@ router.post('/generate', async (req, res) => {
         timeSpent: p.total_time_minutes,
         percentage: p.percentage,
       })),
+      // New data fields
+      leaveDays: {
+        totalDays: leaveDays?.totalDays || 0,
+        recentLeaves: leaveDays?.recentLeaves || []
+      },
+      courses: {
+        totalCourses: courses?.totalCourses || 0,
+        completedCourses: courses?.completedCourses || 0,
+        recentCourses: courses?.recentCourses || [],
+        daysWithLearning: courses?.daysWithLearning || 0
+      },
+      battery: battery || null,
+      memory: {
+        totalUsageMB: memory?.totalUsageMB || 0,
+        totalUsageGB: memory?.totalUsageGB || 0
+      }
     };
 
     // Create the prompt for OpenAI
     const prompt = `You are an AI productivity coach analyzing employee work patterns. Based on the following data, provide 3-5 personalized, actionable suggestions to improve productivity and well-being.
+
+IMPORTANT: Your suggestions MUST reference the specific numbers and data points below. Do not give generic advice - use the actual values provided.
 
 **Current Context:**
 - Time of Day: ${workContext.timeOfDay}
@@ -149,16 +142,47 @@ router.post('/generate', async (req, res) => {
 **Work Pattern Breakdown:**
 ${workContext.patterns.map(p => `- ${p.type}: ${p.timeSpent.toFixed(0)} minutes (${p.percentage}%)`).join('\n')}
 
-**Requirements:**
-1. Provide 3-5 suggestions with varying priority levels (high, medium, low)
-2. Each suggestion should have:
+**USER'S LEAVE & TIME OFF DATA (MUST REFERENCE IN SUGGESTIONS):**
+- Leave Days Taken (Recent): ${workContext.leaveDays.totalDays} days
+${workContext.leaveDays.recentLeaves.length > 0 ? `- Recent Leave Dates: ${workContext.leaveDays.recentLeaves.map(l => `${l.date} (${l.dayOfWeek}, ${l.runningHours.toFixed(1)}h worked)`).join(', ')}` : '- No recent leave days recorded'}
+- Analysis: ${workContext.leaveDays.totalDays < 5 ? 'User needs to plan more time off for rest and rejuvenation' : 'Good balance of work and time off'}
+
+**USER'S LEARNING & DEVELOPMENT DATA (MUST REFERENCE IN SUGGESTIONS):**
+- Total Courses: ${workContext.courses.totalCourses}
+- Completed Courses: ${workContext.courses.completedCourses}
+- Days with Learning Activity: ${workContext.courses.daysWithLearning}
+${workContext.courses.recentCourses.length > 0 ? `- Recent Courses: ${workContext.courses.recentCourses.map(c => `${c.title} (${c.progress}% complete)`).join(', ')}` : '- No recent course activity'}
+- Analysis: ${workContext.courses.completedCourses > 0 ? `User has completed ${workContext.courses.completedCourses} courses - encourage next steps` : 'User should start a learning path to enhance skills'}
+
+**USER'S SYSTEM RESOURCES DATA (MUST REFERENCE IN SUGGESTIONS):**
+- Memory Usage: ${workContext.memory.totalUsageGB} GB (${workContext.memory.totalUsageMB.toFixed(0)} MB)
+${workContext.memory.totalUsageMB > 8000 ? '- HIGH MEMORY USAGE - Suggest closing specific apps' : '- Memory usage is within normal range'}
+${workContext.battery ? `- Battery: ${workContext.battery.percent}% (${workContext.battery.status})${workContext.battery.status === 'low' ? ' - CRITICAL: User needs to charge device' : ''}` : '- Battery: Desktop system (no battery)'}
+
+**CRITICAL REQUIREMENTS:**
+1. YOU MUST mention at least 2-3 of these SPECIFIC data points in your suggestions:
+   - The exact number of leave days (${workContext.leaveDays.totalDays} days)
+   - The exact number of completed courses (${workContext.courses.completedCourses} courses)
+   - The exact memory usage (${workContext.memory.totalUsageGB} GB)
+   - The exact battery percentage (${workContext.battery ? workContext.battery.percent + '%' : 'N/A'})
+   - The exact productivity score (${workContext.productivityScore}%)
+   
+2. Provide 3-5 suggestions with varying priority levels (high, medium, low)
+3. Each suggestion should have:
    - A clear, concise title (max 6 words)
-   - A brief description (1-2 sentences)
+   - A brief description that MENTIONS THE ACTUAL DATA (e.g., "You've taken 2 leave days..." or "Your memory usage at 12.5 GB...")
    - 2-4 specific, actionable items
-   - A category (productivity, wellbeing, or balance)
+   - A category (productivity, wellbeing, balance, learning, or system)
    - A priority level (high, medium, or low)
-3. Be empathetic, encouraging, and specific
-4. Consider the time of day and current work patterns
+4. Be empathetic, encouraging, and specific
+4. Consider ALL the data points above:
+   - Focus/productivity scores (suggest improvements for low scores, encourage breaks for high scores)
+   - Idle time (suggest taking proper breaks if too low, or focus techniques if too high)
+   - Leave days (suggest planning time off, utilizing leave balance wisely)
+   - Courses (recommend next courses based on completed ones, encourage consistent learning)
+   - Memory usage (suggest closing apps, optimizing system performance)
+   - Battery (remind to charge, optimize battery settings)
+   - Application usage patterns (suggest better app organization, time management)
 5. Balance productivity with well-being
 6. If the user is doing well, acknowledge it with positive reinforcement
 
@@ -166,13 +190,13 @@ Format your response as a JSON array of suggestion objects with this structure:
 [
   {
     "title": "Clear, actionable title",
-    "description": "Brief explanation of why this matters",
-    "category": "productivity|wellbeing|balance",
+    "description": "Brief explanation of why this matters based on their specific data",
+    "category": "productivity|wellbeing|balance|learning|system",
     "priority": "high|medium|low",
     "actionItems": [
-      "Specific action 1",
-      "Specific action 2",
-      "Specific action 3"
+      "Specific action 1 based on their data",
+      "Specific action 2 based on their data",
+      "Specific action 3 based on their data"
     ]
   }
 ]
@@ -182,10 +206,40 @@ Respond ONLY with valid JSON, no additional text.`;
     const systemPrompt = 'You are an expert AI productivity coach specializing in work-life balance and employee well-being. You provide personalized, actionable suggestions based on work pattern analysis. Always respond with valid JSON only.';
 
     console.log(`Calling ${AI_PROVIDER.toUpperCase()} with work patterns data...`);
+    console.log('📊 Work Context Data:', JSON.stringify({
+      leaveDays: workContext.leaveDays,
+      courses: workContext.courses,
+      battery: workContext.battery,
+      memory: workContext.memory,
+      productivityScore: workContext.productivityScore
+    }, null, 2));
+
+    console.log('\n🔍 FULL PROMPT BEING SENT TO AI:\n', prompt);
 
     // Call AI provider (Ollama or OpenAI)
     const responseText = await callAI(prompt, systemPrompt);
-    console.log('AI Response received:', responseText.substring(0, 200) + '...');
+    console.log('\n✅ FULL AI RESPONSE:\n', responseText);
+    console.log('\n📏 Response length:', responseText.length, 'characters');
+
+    // Write to debug file for inspection
+    const debugLogPath = path.join(__dirname, '..', 'ai-debug.log');
+    const debugData = `
+=== AI REQUEST DEBUG LOG ===
+Timestamp: ${new Date().toISOString()}
+
+WORK CONTEXT:
+${JSON.stringify(workContext, null, 2)}
+
+PROMPT SENT TO AI:
+${prompt}
+
+RESPONSE FROM AI:
+${responseText}
+
+=== END DEBUG LOG ===
+\n\n`;
+    fs.appendFileSync(debugLogPath, debugData);
+    console.log('📝 Debug log written to:', debugLogPath);
 
     // Parse the response
     let suggestions;
@@ -241,6 +295,8 @@ function getCategoryIcon(category) {
     productivity: 'Work',
     wellbeing: 'FitnessCenter',
     balance: 'Schedule',
+    learning: 'Psychology',
+    system: 'Memory',
   };
   return icons[category] || 'Lightbulb';
 }

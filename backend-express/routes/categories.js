@@ -24,9 +24,6 @@ const DEFAULT_CATEGORIES = [
       'Microsoft Excel',
       'Microsoft Word',
       'Microsoft PowerPoint',
-      'Google Chrome',
-      'Firefox',
-      'Edge',
       'Notepad'
     ]
   },
@@ -44,6 +41,20 @@ const DEFAULT_CATEGORIES = [
       'Microsoft Outlook',
       'Gmail',
       'Thunderbird'
+    ]
+  },
+  {
+    id: 'browsers',
+    name: 'Browsers',
+    icon: 'Apps',
+    color: '#9c27b0',
+    applications: [
+      'Google Chrome',
+      'Microsoft Edge',
+      'Firefox',
+      'Opera',
+      'Brave',
+      'Safari'
     ]
   },
   {

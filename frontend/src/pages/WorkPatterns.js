@@ -1,4 +1,4 @@
-import React, { useEffect, useState as useReactState } from 'react';
+import React, { useEffect, useState as useReactState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -40,6 +40,8 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Fab,
+  Badge,
 } from '@mui/material';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -51,6 +53,12 @@ import PeopleIcon from '@mui/icons-material/People';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import HomeIcon from '@mui/icons-material/Home';
+import ChatIcon from '@mui/icons-material/Chat';
+import SendIcon from '@mui/icons-material/Send';
+import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import PersonIcon from '@mui/icons-material/Person';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -119,6 +127,14 @@ const WorkPatterns = () => {
   const [accordionData, setAccordionData] = React.useState(null);
   const [expandedAccordionApp, setExpandedAccordionApp] = React.useState(null);
   const [expandedAccordionProject, setExpandedAccordionProject] = React.useState({});
+  
+  // Chatbot states
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatInput, setChatInput] = React.useState('');
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const chatEndRef = useRef(null);
+  
   // Stepper view state
   const [stepperViewOpen, setStepperViewOpen] = React.useState(false);
   const [stepperData, setStepperData] = React.useState(null);
@@ -257,6 +273,7 @@ const WorkPatterns = () => {
   // Helper function to recategorize apps based on current category configuration
   const recategorizeApp = React.useCallback((appName) => {
     if (!categories || categories.length === 0) {
+      console.warn('⚠️ Categories not loaded yet, returning Uncategorized for:', appName);
       return 'Uncategorized';
     }
     
@@ -266,6 +283,13 @@ const WorkPatterns = () => {
       }
     }
     
+    // Log when app is not categorized (first 3 only to avoid spam)
+    if (Math.random() < 0.1) { // Log ~10% for sampling
+      console.log(`❌ "${appName}" not found in any category`);
+      console.log('   Categories:', categories.map(c => c.name));
+      console.log('   Sample apps in first category:', categories[0]?.applications?.slice(0, 5));
+    }
+    
     return 'Uncategorized';
   }, [categories]);
 
@@ -273,6 +297,8 @@ const WorkPatterns = () => {
   const fetchRangeData = React.useCallback(async (startDate, endDate) => {
     setIsLoading(true);
     setError(null);
+    
+    console.log('🔄 fetchRangeData called:', { startDate, endDate });
     
     try {
       const start = new Date(startDate);
@@ -293,6 +319,15 @@ const WorkPatterns = () => {
           const response = await fetch(endpoint);
           if (response.ok) {
             const data = await response.json();
+            console.log(`📅 Fetched data for ${dateStr}:`, {
+              appsCount: data.apps?.length || 0,
+              hourlySummaryCount: data.hourlySummary?.length || 0,
+              sampleApp: data.apps?.[0] ? {
+                name: data.apps[0].name,
+                hasHourlyStats: !!data.apps[0].hourlyStats,
+                hourlyStatsLength: data.apps[0].hourlyStats?.length || 0
+              } : null
+            });
             allData.push({ date: dateStr, ...data });
           }
         } catch (err) {
@@ -300,14 +335,23 @@ const WorkPatterns = () => {
         }
       }
       
+      console.log(`📊 Total days fetched: ${allData.length}`);
+      
       if (allData.length === 0) {
         setActivityData({ apps: [], system: {}, hourlySummary: [] });
         setError('No data available for this period');
         return;
       }
       
+      console.log(`📂 Categories available for aggregation: ${categories?.length || 0}`);
+      
       // Aggregate data
       const aggregated = aggregateMultipleDays(allData);
+      
+      console.log('📊 Sample aggregated app categories:', 
+        aggregated.apps.slice(0, 5).map(app => `${app.name}: ${app.category}`).join(', ')
+      );
+      
       setActivityData(aggregated);
       
     } catch (err) {
@@ -320,7 +364,7 @@ const WorkPatterns = () => {
   }, [recategorizeApp]);
 
   // Aggregate data from multiple days
-  const aggregateMultipleDays = (daysData) => {
+  const aggregateMultipleDays = React.useCallback((daysData) => {
     const aggregated = {
       timestamp: new Date().toISOString(),
       system: {
@@ -367,10 +411,16 @@ const WorkPatterns = () => {
         dayData.apps.forEach(app => {
           const key = app.name || app.title;
           if (!appMap.has(key)) {
+            // Try to categorize using title first (display name), then fallback to name (executable)
+            const categoryByTitle = app.title ? recategorizeApp(app.title) : 'Uncategorized';
+            const category = categoryByTitle !== 'Uncategorized' 
+              ? categoryByTitle 
+              : recategorizeApp(app.name || app.title);
+            
             appMap.set(key, {
               name: app.name,
               title: app.title,
-              category: recategorizeApp(app.name || app.title),  // Use dynamic categorization
+              category: category,
               focusDurationSec: 0,
               runningTimeSec: 0,
               aggregates: {
@@ -380,6 +430,7 @@ const WorkPatterns = () => {
                 peakMemoryMB: 0
               },
               hourlyStats: [],
+              hourlyStatsMap: new Map(), // Temporary map for aggregating hourly stats
               focusSwitches: []
             });
           }
@@ -390,6 +441,32 @@ const WorkPatterns = () => {
           existing.aggregates.totalRunHours += app.aggregates?.totalRunHours || 0;
           existing.aggregates.totalFocusHours += app.aggregates?.totalFocusHours || 0;
           existing.aggregates.peakMemoryMB = Math.max(existing.aggregates.peakMemoryMB, app.aggregates?.peakMemoryMB || 0);
+          
+          // Aggregate hourly stats for this app
+          if (app.hourlyStats && Array.isArray(app.hourlyStats)) {
+            if (app.hourlyStats.length > 0 && appMap.size <= 3) {
+              console.log(`  📊 App "${app.name}" has ${app.hourlyStats.length} hourly stats entries`);
+            }
+            app.hourlyStats.forEach(hourStat => {
+              const hour = hourStat.hour;
+              if (!existing.hourlyStatsMap.has(hour)) {
+                existing.hourlyStatsMap.set(hour, {
+                  hour: hour,
+                  focusSeconds: 0,
+                  runningSeconds: 0,
+                  switches: 0,
+                  count: 0
+                });
+              }
+              const existingHour = existing.hourlyStatsMap.get(hour);
+              existingHour.focusSeconds += hourStat.focusSeconds || 0;
+              existingHour.runningSeconds += hourStat.runningSeconds || 0;
+              existingHour.switches += hourStat.switches || 0;
+              existingHour.count++;
+            });
+          } else if (appMap.size <= 3) {
+            console.log(`  ⚠️ App "${app.name}" has NO hourlyStats or empty array`);
+          }
           
           if (app.focusSwitches) {
             existing.focusSwitches.push(...app.focusSwitches);
@@ -424,7 +501,20 @@ const WorkPatterns = () => {
     aggregated.system.aggregates.avgCPU = cpuCount > 0 ? totalCPU / cpuCount : 0;
     
     // Convert maps to arrays and average hourly data
-    aggregated.apps = Array.from(appMap.values());
+    aggregated.apps = Array.from(appMap.values()).map(app => {
+      // Convert hourlyStatsMap to hourlyStats array
+      if (app.hourlyStatsMap && app.hourlyStatsMap.size > 0) {
+        app.hourlyStats = Array.from(app.hourlyStatsMap.values()).map(h => ({
+          hour: h.hour,
+          focusSeconds: h.count > 0 ? Math.round(h.focusSeconds / h.count) : h.focusSeconds,
+          runningSeconds: h.count > 0 ? Math.round(h.runningSeconds / h.count) : h.runningSeconds,
+          switches: h.count > 0 ? Math.round(h.switches / h.count) : h.switches
+        }));
+        delete app.hourlyStatsMap; // Remove temporary map
+      }
+      return app;
+    });
+    
     aggregated.hourlySummary = Array.from(hourMap.values()).map(h => ({
       hour: h.hour,
       productiveFocusSec: Math.round(h.productiveFocusSec / h.count),
@@ -432,8 +522,20 @@ const WorkPatterns = () => {
       idleSec: Math.round(h.idleSec / h.count)
     }));
     
+    console.log('✅ Aggregation complete:', {
+      totalApps: aggregated.apps.length,
+      totalHours: aggregated.hourlySummary.length,
+      sampleApp: aggregated.apps[0] ? {
+        name: aggregated.apps[0].name,
+        category: aggregated.apps[0].category,
+        hasHourlyStats: !!aggregated.apps[0].hourlyStats,
+        hourlyStatsLength: aggregated.apps[0].hourlyStats?.length || 0,
+        firstHourStat: aggregated.apps[0].hourlyStats?.[0]
+      } : null
+    });
+    
     return aggregated;
-  };
+  }, [recategorizeApp]);
 
   const fetchData = React.useCallback(async (date) => {
     setIsLoading(true);
@@ -451,6 +553,29 @@ const WorkPatterns = () => {
       const response = await fetch(endpoint);
       if (response.ok) {
         const data = await response.json();
+        
+        // Recategorize apps based on current category configuration
+        if (data.apps && categories.length > 0) {
+          console.log('🔄 Recategorizing apps for daily view...');
+          data.apps = data.apps.map(app => {
+            // Try to categorize using title first (display name), then fallback to name (executable)
+            const categoryByTitle = app.title ? recategorizeApp(app.title) : 'Uncategorized';
+            const category = categoryByTitle !== 'Uncategorized' 
+              ? categoryByTitle 
+              : recategorizeApp(app.name || app.title);
+            
+            return {
+              ...app,
+              category: category
+            };
+          });
+          
+          console.log('✅ Daily view recategorization complete:', {
+            totalApps: data.apps.length,
+            sampleCategories: data.apps.slice(0, 5).map(a => `${a.name}: ${a.category}`)
+          });
+        }
+        
         setActivityData(data);
       } else if (response.status === 404) {
         setActivityData({ apps: [], system: {}, hourlySummary: [] });
@@ -465,7 +590,7 @@ const WorkPatterns = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [categories, recategorizeApp]);
 
   useEffect(() => {
     if (dateFilterMode === 'daily') {
@@ -488,6 +613,28 @@ const WorkPatterns = () => {
       return `${(mb / 1024).toFixed(1)} GB`;
     }
     return `${mb?.toFixed(1) || 0} MB`;
+  };
+
+  // Format time in a user-friendly way
+  const formatTime = (hours) => {
+    const totalMinutes = Math.round(hours * 60);
+    
+    if (totalMinutes < 60) {
+      return `${totalMinutes}m`;
+    } else {
+      const hrs = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      if (mins === 0) {
+        return `${hrs}h`;
+      } else {
+        return `${hrs}h ${mins}m`;
+      }
+    }
+  };
+
+  // Format seconds to time
+  const formatSeconds = (seconds) => {
+    return formatTime(seconds / 3600);
   };
 
   // Parse window title to extract project and module information
@@ -671,12 +818,28 @@ const WorkPatterns = () => {
         return acc;
       }, {});
 
+    // Calculate times from recategorized apps instead of hourlySummary
+    const productiveTime = (appsByCategory['Productivity'] || 0);
+    const communicationTime = (appsByCategory['Communication'] || 0);
     const browsersTime = (appsByCategory['Browsers'] || 0);
+    
+    console.log('📊 Work Pattern Chart Data:', {
+      productive: {
+        fromHourlySummary: Math.round(summary.productive / 60) + 'm',
+        fromApps: Math.round(productiveTime / 60) + 'm'
+      },
+      communication: {
+        fromHourlySummary: Math.round(summary.communication / 60) + 'm',
+        fromApps: Math.round(communicationTime / 60) + 'm'
+      },
+      browsers: Math.round(browsersTime / 60) + 'm',
+      allCategories: Object.keys(appsByCategory).map(cat => `${cat}: ${Math.round(appsByCategory[cat] / 60)}m`)
+    });
 
     const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
     const data = [
-      Math.round(summary.productive / 60),
-      Math.round(summary.communication / 60),
+      Math.round(productiveTime / 60),      // Use recategorized Productivity apps
+      Math.round(communicationTime / 60),   // Use recategorized Communication apps
       Math.round(browsersTime / 60),
       Math.round(summary.idle / 60)
     ];
@@ -881,10 +1044,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -899,6 +1062,14 @@ const WorkPatterns = () => {
             acc + (hour.idleSec || 0), 0)
         });
       } else {
+        console.log('🔍 Daily Focus Work Debug:', {
+          clickedLabel,
+          categoryKey,
+          totalApps: activityData.apps.length,
+          sampleCategories: activityData.apps.slice(0, 10).map(a => `${a.name}: ${a.category}`),
+          appsWithCategoryKey: activityData.apps.filter(app => app.category === categoryKey).length
+        });
+        
         const appsForCategory = activityData.apps
           .filter(app => app.name !== 'background_apps' && app.category === categoryKey)
           .map(app => ({
@@ -910,6 +1081,8 @@ const WorkPatterns = () => {
           }))
           .filter(app => app.focusTime > 0)
           .sort((a, b) => b.focusTime - a.focusTime);
+        
+        console.log('📱 Apps found for category:', appsForCategory.length);
         
         setSelectedWorkPatternCategory({
           label: clickedLabel,
@@ -964,10 +1137,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -1024,10 +1197,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -1078,10 +1251,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -1137,10 +1310,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -1220,10 +1393,10 @@ const WorkPatterns = () => {
       const clickedIndex = elements[0].index;
       const labels = ['🎯 Focus Work', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
       const categoryMapping = {
-        '🎯 Focus Work': 'Productive',
+        '🎯 Focus Work': 'Productivity',
         '📞 Communication': 'Communication',
         '🌐 Browsing': 'Browsers',
-        '☕ Breaks': 'Breaks'
+        '☕ Breaks': 'Break'
       };
       
       const clickedLabel = labels[clickedIndex];
@@ -1407,13 +1580,21 @@ const WorkPatterns = () => {
       const datasetIndex = elements[0].datasetIndex;
       const hour = activityData.hourlySummary[clickedIndex]?.hour;
       const categoryLabels = ['🎯 Productive', '📞 Communication', '🌐 Browsing', '☕ Breaks'];
-      const categoryKeys = ['Productive', 'Communication', 'Browsers', 'Breaks'];
+      // Updated to match the actual category names from the API
+      const categoryKeys = ['Productivity', 'Communication', 'Browsers', 'Break'];
       
       const clickedCategory = categoryLabels[datasetIndex];
       const categoryKey = categoryKeys[datasetIndex];
       
+      console.log('=== Category Focus Click Debug ===');
+      console.log('Date Filter Mode:', dateFilterMode);
+      console.log('Clicked Hour:', hour);
+      console.log('Category:', clickedCategory, '(', categoryKey, ')');
+      console.log('Total Apps:', activityData.apps?.length);
+      console.log('Apps in category:', activityData.apps?.filter(app => app.category === categoryKey).length);
+      
       // Handle Breaks category specially
-      if (categoryKey === 'Breaks') {
+      if (categoryKey === 'Break') {
         const hourData = activityData.hourlySummary[clickedIndex];
         setSelectedCategoryFocusData({
           hour: hour,
@@ -1423,10 +1604,16 @@ const WorkPatterns = () => {
           idleMinutes: Math.round((hourData?.idleSec || 0) / 60)
         });
       } else {
-        const appsForHour = activityData.apps
-          .filter(app => app.name !== 'background_apps' && app.category === categoryKey)
+        const appsInCategory = activityData.apps.filter(app => app.name !== 'background_apps' && app.category === categoryKey);
+        console.log('Apps in category (filtered):', appsInCategory.length);
+        appsInCategory.forEach(app => {
+          console.log('App:', app.name, 'has hourlyStats:', app.hourlyStats?.length || 0, 'entries');
+        });
+        
+        const appsForHour = appsInCategory
           .map(app => {
             const hourStat = app.hourlyStats?.find(h => h.hour === hour);
+            console.log('App:', app.name, 'hourStat for', hour, ':', hourStat);
             return {
               name: app.title || app.name,
               focusTime: hourStat?.focusSeconds || 0,
@@ -1435,6 +1622,9 @@ const WorkPatterns = () => {
           })
           .filter(app => app.focusTime > 0)
           .sort((a, b) => b.focusTime - a.focusTime);
+        
+        console.log('Final apps for hour:', appsForHour.length);
+        console.log('Apps:', appsForHour);
         
         setSelectedCategoryFocusData({
           hour: hour,
@@ -1548,6 +1738,113 @@ const WorkPatterns = () => {
   const handleHeatmapSplitView = (hourIndex) => handleHeatmapClick(hourIndex);
   const handleHeatmapAccordionView = (hourIndex) => handleHeatmapClick(hourIndex);
   const handleHeatmapStepperView = (hourIndex) => handleHeatmapClick(hourIndex);
+
+  // Chatbot functions
+  const handleChatOpen = () => {
+    setChatOpen(true);
+    if (chatMessages.length === 0) {
+      // Add welcome message
+      setChatMessages([{
+        role: 'assistant',
+        content: 'Hi! I\'m your Work Pattern AI assistant. I can help you:\n\n📊 Analyze your work patterns\n⏰ Understand your focus time\n📈 Track productivity trends\n📄 Generate Excel reports\n\nWhat would you like to know?'
+      }]);
+    }
+  };
+
+  const handleChatClose = () => {
+    setChatOpen(false);
+  };
+
+  const handleChatSend = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    
+    // Add user message to chat
+    const newMessages = [...chatMessages, { role: 'user', content: userMessage }];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8001/api/work-patterns/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          date: selectedDate,
+          conversationHistory: chatMessages.slice(-10) // Send last 10 messages for context
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.action === 'generate_excel') {
+        // Generate and download Excel report
+        setChatMessages([...newMessages, { role: 'assistant', content: data.response + '\n\n📥 Generating Excel report...' }]);
+        await handleGenerateExcel();
+      } else {
+        // Add AI response to chat
+        setChatMessages([...newMessages, { role: 'assistant', content: data.response }]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setChatMessages([...newMessages, { 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error processing your request. Please make sure the backend server is running and try again.' 
+      }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleGenerateExcel = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8001/api/work-patterns/generate-excel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: selectedDate }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Excel report');
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `work-pattern-${selectedDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      // Update chat with success message
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: '✅ Excel report generated successfully! The file has been downloaded to your computer.' 
+      }]);
+    } catch (error) {
+      console.error('Excel generation error:', error);
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: '❌ Failed to generate Excel report. Please try again.' 
+      }]);
+    }
+  };
+
+  // Scroll to bottom of chat when new messages arrive
+  React.useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   if (isLoading) {
     return (
@@ -1845,53 +2142,6 @@ const WorkPatterns = () => {
                 }
               }}
             />
-          </Paper>
-        </Grid>
-
-        {/* Overall Time Distribution */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom>
-              🥧 Overall Time Distribution
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              See how your time is split between productive work, communication, and idle time
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-              <Button 
-                size="small" 
-                variant="outlined"
-                onClick={() => setTimeDistHybridDialogOpen(true)}
-                startIcon={<AppsIcon />}
-              >
-                View Style: {timeDistViewStyle === 'card-stack' ? 'Cards' : timeDistViewStyle === 'breadcrumbs' ? 'Breadcrumbs' : timeDistViewStyle === 'tree' ? 'Tree' : timeDistViewStyle === 'split' ? 'Split' : timeDistViewStyle === 'accordion' ? 'Accordion' : 'Stepper'}
-              </Button>
-            </Box>
-            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
-              <Doughnut 
-                data={getOverallTimeDistributionData()} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: true,
-                  onClick: (event, elements) => handleTimeDistributionHybrid(event, elements),
-                  plugins: {
-                    legend: {
-                      position: 'right',
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: function(context) {
-                          const value = context.parsed;
-                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                          const percentage = ((value / total) * 100).toFixed(1);
-                          return `${context.label}: ${percentage}%`;
-                        }
-                      }
-                    }
-                  }
-                }}
-              />
-            </Box>
           </Paper>
         </Grid>
 
@@ -2348,7 +2598,7 @@ const WorkPatterns = () => {
                                 <Grid item xs={6}>
                                   <Typography variant="caption" color="text.secondary">Time</Typography>
                                   <Typography variant="h6" color="primary">
-                                    {Math.round(app.focusTime / 60)}m
+                                    {formatSeconds(app.focusTime)}
                                   </Typography>
                                 </Grid>
                                 <Grid item xs={6}>
@@ -2406,7 +2656,7 @@ const WorkPatterns = () => {
                                 <Grid item xs={6}>
                                   <Typography variant="caption" color="text.secondary">Time</Typography>
                                   <Typography variant="h6" color="warning.main">
-                                    {Math.round(project.totalTime / 60)}m
+                                    {formatSeconds(project.totalTime)}
                                   </Typography>
                                 </Grid>
                                 <Grid item xs={6}>
@@ -2961,7 +3211,7 @@ const WorkPatterns = () => {
                               </ListItemIcon>
                               <ListItemText
                                 primary={project.name}
-                                secondary={`${Math.round(project.totalTime / 60)} min`}
+                                secondary={formatSeconds(project.totalTime)}
                                 primaryTypographyProps={{ variant: 'body2' }}
                                 secondaryTypographyProps={{ variant: 'caption' }}
                               />
@@ -2988,7 +3238,7 @@ const WorkPatterns = () => {
                                     </ListItemIcon>
                                     <ListItemText
                                       primary={module.name}
-                                      secondary={`${Math.round(module.time / 60)} min`}
+                                      secondary={formatSeconds(module.time)}
                                       primaryTypographyProps={{ variant: 'body2' }}
                                       secondaryTypographyProps={{ variant: 'caption' }}
                                     />
@@ -3045,7 +3295,7 @@ const WorkPatterns = () => {
                         <Grid container spacing={2}>
                           <Grid item xs={6}>
                             <Typography variant="body2" color="text.secondary">Total Focus Time</Typography>
-                            <Typography variant="h5">{Math.round(selectedItem.focusTime / 60)} minutes</Typography>
+                            <Typography variant="h5">{formatSeconds(selectedItem.focusTime)}</Typography>
                           </Grid>
                           <Grid item xs={6}>
                             <Typography variant="body2" color="text.secondary">Projects</Typography>
@@ -3061,7 +3311,7 @@ const WorkPatterns = () => {
                             <ListItemIcon><FolderIcon color="warning" /></ListItemIcon>
                             <ListItemText
                               primary={project.name}
-                              secondary={`${Math.round(project.totalTime / 60)} min • ${project.modules.length} modules`}
+                              secondary={`${formatSeconds(project.totalTime)} • ${project.modules.length} modules`}
                             />
                           </ListItem>
                         ))}
@@ -3085,7 +3335,7 @@ const WorkPatterns = () => {
                         <Grid container spacing={2}>
                           <Grid item xs={6}>
                             <Typography variant="body2" color="text.secondary">Total Time</Typography>
-                            <Typography variant="h5">{Math.round(selectedItem.totalTime / 60)} minutes</Typography>
+                            <Typography variant="h5">{formatSeconds(selectedItem.totalTime)}</Typography>
                           </Grid>
                           <Grid item xs={6}>
                             <Typography variant="body2" color="text.secondary">Modules</Typography>
@@ -3101,7 +3351,7 @@ const WorkPatterns = () => {
                             <ListItemIcon><InsertDriveFileIcon color="success" /></ListItemIcon>
                             <ListItemText
                               primary={module.name}
-                              secondary={`${Math.round(module.time / 60)} min • ${module.switchCount} switches`}
+                              secondary={`${formatSeconds(module.time)} • ${module.switchCount} switches`}
                             />
                           </ListItem>
                         ))}
@@ -3125,7 +3375,7 @@ const WorkPatterns = () => {
                         <Grid container spacing={2}>
                           <Grid item xs={6}>
                             <Typography variant="body2" color="text.secondary">Time Spent</Typography>
-                            <Typography variant="h5">{Math.round(selectedItem.time / 60)} minutes</Typography>
+                            <Typography variant="h5">{formatSeconds(selectedItem.time)}</Typography>
                             <Typography variant="caption" color="text.secondary">
                               ({Math.round(selectedItem.time)} seconds)
                             </Typography>
@@ -3377,7 +3627,7 @@ const WorkPatterns = () => {
                                 )}
                               </Box>
                             }
-                            secondary={`Focus time: ${app.focusTimeMinutes} minutes (${Math.round(app.focusTime)} seconds)`}
+                            secondary={`Focus time: ${formatSeconds(app.focusTime)}`}
                           />
                         </ListItem>
                         {index < selectedWorkPatternCategory.apps.length - 1 && <Divider />}
@@ -3635,7 +3885,7 @@ const WorkPatterns = () => {
                         <ListItem>
                           <ListItemText
                             primary={app.name}
-                            secondary={`Focus time: ${app.focusTimeMinutes} minutes`}
+                            secondary={`Focus time: ${formatSeconds(app.focusTime)}`}
                           />
                         </ListItem>
                         {index < selectedCategoryFocusData.apps.length - 1 && <Divider />}
@@ -3694,10 +3944,10 @@ const WorkPatterns = () => {
                             secondary={
                               <Box>
                                 <Typography variant="caption" display="block">
-                                  Focus time: {app.focusTimeMinutes} minutes
+                                  Focus time: {formatSeconds(app.focusTime)}
                                 </Typography>
                                 <Typography variant="caption" display="block">
-                                  Running time: {app.runningTimeMinutes} minutes
+                                  Running time: {formatSeconds(app.runningTime)}
                                 </Typography>
                               </Box>
                             }
@@ -3766,7 +4016,7 @@ const WorkPatterns = () => {
                               Category: {app.category}
                             </Typography>
                             <Typography variant="caption" display="block">
-                              Focus time: {app.focusTimeMinutes} minutes
+                              Focus time: {formatSeconds(app.focusTime)}
                             </Typography>
                           </Box>
                         }
@@ -3897,6 +4147,224 @@ const WorkPatterns = () => {
           <Button onClick={() => setTimelineDialogOpen(false)} color="primary">
             Close
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Chatbot Floating Action Button */}
+      <Fab 
+        color="primary" 
+        aria-label="chat"
+        onClick={handleChatOpen}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+          }
+        }}
+      >
+        <Badge badgeContent={chatMessages.length > 0 ? '•' : null} color="error">
+          <ChatIcon />
+        </Badge>
+      </Fab>
+
+      {/* Chatbot Dialog */}
+      <Dialog
+        open={chatOpen}
+        onClose={handleChatClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            position: 'fixed',
+            bottom: 90,
+            right: 24,
+            m: 0,
+            maxHeight: '600px',
+            height: '600px',
+            maxWidth: '450px',
+            borderRadius: 3,
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          py: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SmartToyIcon />
+            <Typography variant="h6">Work Pattern AI Assistant</Typography>
+          </Box>
+          <IconButton onClick={handleChatClose} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: 'calc(100% - 130px)' }}>
+          {/* Chat Messages */}
+          <Box sx={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            {chatMessages.map((message, index) => (
+              <Box
+                key={index}
+                sx={{
+                  display: 'flex',
+                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  gap: 1
+                }}
+              >
+                {message.role === 'assistant' && (
+                  <Box sx={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: '50%', 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <SmartToyIcon sx={{ color: 'white', fontSize: 18 }} />
+                  </Box>
+                )}
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 1.5,
+                    maxWidth: '75%',
+                    borderRadius: 2,
+                    bgcolor: message.role === 'user' 
+                      ? 'primary.main' 
+                      : 'grey.100',
+                    color: message.role === 'user' ? 'white' : 'text.primary',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {message.content}
+                  </Typography>
+                </Paper>
+                {message.role === 'user' && (
+                  <Box sx={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: '50%', 
+                    bgcolor: 'primary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <PersonIcon sx={{ color: 'white', fontSize: 18 }} />
+                  </Box>
+                )}
+              </Box>
+            ))}
+            {chatLoading && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Box sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: '50%', 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <SmartToyIcon sx={{ color: 'white', fontSize: 18 }} />
+                </Box>
+                <Paper elevation={1} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'grey.100' }}>
+                  <CircularProgress size={20} />
+                </Paper>
+              </Box>
+            )}
+            <div ref={chatEndRef} />
+          </Box>
+
+          {/* Quick Action Buttons */}
+          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              Quick Actions:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => {
+                  setChatInput('Generate an Excel report of my work patterns');
+                  handleChatSend();
+                }}
+                disabled={chatLoading}
+              >
+                Generate Report
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setChatInput('What were my most productive hours today?')}
+                disabled={chatLoading}
+              >
+                Productivity
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setChatInput('Analyze my focus time distribution')}
+                disabled={chatLoading}
+              >
+                Focus Time
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <TextField
+            fullWidth
+            placeholder="Ask about your work patterns..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSend();
+              }
+            }}
+            disabled={chatLoading}
+            size="small"
+            sx={{ mr: 1 }}
+          />
+          <IconButton 
+            color="primary" 
+            onClick={handleChatSend}
+            disabled={!chatInput.trim() || chatLoading}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              },
+              '&:disabled': {
+                background: 'grey.300',
+                color: 'grey.500'
+              }
+            }}
+          >
+            <SendIcon />
+          </IconButton>
         </DialogActions>
       </Dialog>
     </Box>

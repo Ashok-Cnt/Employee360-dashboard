@@ -159,6 +159,9 @@ app.get('/', (req, res) => {
 const userRoutes = require('./routes/users-json');
 const appRoutes = require('./routes/applications-json');
 const aiSuggestionsRoutes = require('./routes/ai-suggestions-json');
+const aiInsightsRoutes = require('./routes/ai-insights');
+const configRoutes = require('./routes/config');
+const workPatternChatRoutes = require('./routes/work-pattern-chat'); // Work pattern chatbot and Excel reports
 const activityLocalRoutes = require('./routes/activity-local'); // Use the JSONL reader router
 const alertsRoutes = require('./routes/alerts');
 const notificationsRoutes = require('./routes/notifications');
@@ -170,6 +173,9 @@ const holidaysRoutes = require('./routes/holidays');
 const udemyCoursesRoutes = require('./routes/udemy-courses'); // New Udemy course details
 const goalsRoutes = require('./routes/goals'); // New goals route
 const userPreferencesRoutes = require('./routes/user-preferences'); // User preferences (display name, reminders)
+const chatbotRoutes = require('./routes/chatbot'); // OpenAI chatbot for project questions
+const learningChatbotRoutes = require('./routes/learning-chatbot'); // Learning progress chatbot
+const learningReportsRoutes = require('./routes/learning-reports'); // Learning progress reports (Excel, Word, PDF)
 
 // ========================================
 // Udemy Tracker Extension Endpoints
@@ -411,6 +417,9 @@ app.get('/api/udemy-tracker/file/:filename', async (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/apps', appRoutes);
 app.use('/api/ai-suggestions', aiSuggestionsRoutes);
+app.use('/api/ai-insights', aiInsightsRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/work-patterns', workPatternChatRoutes);
 app.use('/api/activity', activityLocalRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -422,6 +431,9 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api/holidays', holidaysRoutes);
 app.use('/api/preferences', userPreferencesRoutes); // User preferences API
+app.use('/api/chatbot', chatbotRoutes); // Chatbot API
+app.use('/api/learning-chatbot', learningChatbotRoutes); // Learning chatbot API
+app.use('/api/learning-reports', learningReportsRoutes); // Learning progress reports (Excel, Word, PDF)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

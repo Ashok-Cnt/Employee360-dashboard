@@ -58,6 +58,7 @@ import {
 } from '@mui/icons-material';
 import { fetchSystemUser } from '../store/slices/userSlice';
 import AISuggestions from '../components/AISuggestions';
+import Chatbot from '../components/Chatbot';
 
 // Memoized MetricCard - only re-renders when props change
 const MetricCard = React.memo(({ title, value, icon, color = '#1976d2', onClick }) => {
@@ -535,6 +536,44 @@ const Dashboard = () => {
     return activityData?.system?.aggregates?.idleHours || 0;
   };
 
+  // Get browsing hours (from Browsers category apps)
+  const getBrowsingHours = () => {
+    if (!activityData || !activityData.apps) return 0;
+    const browsersTime = activityData.apps
+      .filter(app => app.name !== 'background_apps' && app.category === 'Browsers')
+      .reduce((total, app) => total + (app.focusDurationSec || 0), 0);
+    return browsersTime / 3600; // Convert seconds to hours
+  };
+
+  // Get communication hours
+  const getCommunicationHours = () => {
+    return activityData?.system?.aggregates?.communicationHours || 0;
+  };
+
+  // Get other hours (monitoring - productive - idle - communication - browsing)
+  const getOtherHours = () => {
+    const total = getMonitoringHours();
+    const accounted = getProductiveHours() + getIdleHours() + getCommunicationHours() + getBrowsingHours();
+    return Math.max(0, total - accounted);
+  };
+
+  // Format time in a user-friendly way
+  const formatTime = (hours) => {
+    const totalMinutes = Math.round(hours * 60);
+    
+    if (totalMinutes < 60) {
+      return `${totalMinutes}m`;
+    } else {
+      const hrs = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      if (mins === 0) {
+        return `${hrs}h`;
+      } else {
+        return `${hrs}h ${mins}m`;
+      }
+    }
+  };
+
   // Get leave days count
   const getLeaveDaysCount = () => {
     return leaveDaysData.length;
@@ -705,7 +744,7 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Monitoring Hours"
-            value={`${getMonitoringHours().toFixed(1)}h`}
+            value={formatTime(getMonitoringHours())}
             icon={<Schedule />}
             color="#e91e63"
             onClick={() => setMonitoringHoursDialogOpen(true)}
@@ -714,7 +753,7 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Productive Hours"
-            value={`${getProductiveHours().toFixed(2)}h`}
+            value={formatTime(getProductiveHours())}
             icon={<Work />}
             color="#4caf50"
             onClick={() => setProductiveHoursDialogOpen(true)}
@@ -727,7 +766,7 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Idle Hours"
-            value={`${getIdleHours().toFixed(2)}h`}
+            value={formatTime(getIdleHours())}
             icon={<Coffee />}
             color="#ff9800"
             onClick={() => setIdleHoursDialogOpen(true)}
@@ -886,69 +925,18 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* AI Suggestions and Activity Feed */}
+      {/* AI Suggestions Section */}
       <Grid container spacing={2}>
-        {/* AI Suggestions Section */}
         <Grid item xs={12}>
           <AISuggestions 
             activityData={activityData}
             focusedWindow={getFocusedWindow()}
+            leaveDaysData={leaveDaysData}
+            coursesData={coursesData}
+            batteryInfo={getBatteryInfo()}
+            memoryUsage={getTotalMemoryUsage()}
+            productivityScore={getProductivityScore()}
           />
-        </Grid>
-
-        {/* Real-time Activity Feed */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Real-time Activity Feed
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              {(() => {
-                const fw = getFocusedWindow();
-                return fw && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    🎯 Currently focused on: <strong>{fw.application}</strong>
-                    {fw.window_title && (
-                      <span> - {fw.window_title}</span>
-                    )}
-                    {fw.memory_usage_mb && (
-                      <Chip 
-                        size="small" 
-                        label={`${formatMemory(fw.memory_usage_mb)}`} 
-                        sx={{ ml: 1 }} 
-                      />
-                    )}
-                  </Typography>
-                );
-              })()}
-              
-              {activityData && activityData.system && (
-                <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    📊 {activityData.apps ? activityData.apps.filter(a => a.name !== 'background_apps').length : 0} applications currently active
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    ⏱️ {getMonitoringHours().toFixed(1)} hours of activity monitored today
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    💻 {getCurrentAppsCount()} applications running now
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    💾 {formatMemory(getTotalMemoryUsage())} total memory usage
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    🎯 Productivity Score: <strong>{getProductivityScore()}%</strong>
-                  </Typography>
-                </>
-              )}
-
-              {!activityData && !isLoading && (
-                <Typography variant="body2" color="text.secondary">
-                  Start some applications to see real-time activity data
-                </Typography>
-              )}
-            </Box>
-          </Paper>
         </Grid>
       </Grid>
 
@@ -1053,7 +1041,7 @@ const Dashboard = () => {
                   Summary
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 0.5 }}>
-                  Total Productive Hours: <strong>{getProductiveHours().toFixed(2)} hours</strong> ({(getProductiveHours() * 60).toFixed(0)} minutes)
+                  Total Productive Hours: <strong>{formatTime(getProductiveHours())}</strong>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Time spent on productive applications like IDEs, editors, and development tools.
@@ -1095,10 +1083,10 @@ const Dashboard = () => {
                               secondary={
                                 <Box sx={{ mt: 1 }}>
                                   <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                    🎯 <strong>Focus Time:</strong> {app.focusTimeHours} hours ({app.focusTimeMinutes} minutes)
+                                    🎯 <strong>Focus Time:</strong> {formatTime(app.focusTime / 3600)}
                                   </Typography>
                                   <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                    ⏱️ <strong>Running Time:</strong> {app.runningTimeMinutes} minutes
+                                    ⏱️ <strong>Running Time:</strong> {formatTime(app.runningTime / 3600)}
                                   </Typography>
                                   <Typography variant="body2" sx={{ mb: 0.5 }}>
                                     💾 <strong>Memory:</strong> {formatMemory(app.memoryUsageMB)}
@@ -1131,7 +1119,7 @@ const Dashboard = () => {
 
                     <Box sx={{ mt: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
                       <Typography variant="body2" color="text.secondary">
-                        💡 <strong>Tip:</strong> Your most productive application was <strong>{productiveApps[0]?.name}</strong> with {productiveApps[0]?.focusTimeHours} hours of focus time.
+                        💡 <strong>Tip:</strong> Your most productive application was <strong>{productiveApps[0]?.name}</strong> with {formatTime(productiveApps[0]?.focusTime / 3600)} of focus time.
                       </Typography>
                     </Box>
                   </Box>
@@ -1549,7 +1537,7 @@ const Dashboard = () => {
         fullWidth
       >
         <DialogTitle>
-          Monitoring Hours - {getMonitoringHours().toFixed(2)} hours
+          Monitoring Hours - {formatTime(getMonitoringHours())}
         </DialogTitle>
         <DialogContent>
           {activityData && activityData.system ? (
@@ -1559,10 +1547,7 @@ const Dashboard = () => {
                   Total Monitoring Time
                 </Typography>
                 <Typography variant="h3" sx={{ mb: 2, color: '#e91e63' }}>
-                  {getMonitoringHours().toFixed(2)} hours
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  {(getMonitoringHours() * 60).toFixed(0)} minutes
+                  {formatTime(getMonitoringHours())}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total time your activity has been monitored today
@@ -1582,7 +1567,7 @@ const Dashboard = () => {
                       🎯 <strong>Productive Time</strong>
                     </Typography>
                     <Typography variant="body2" color="success.main">
-                      {getProductiveHours().toFixed(2)}h ({((getProductiveHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                      {formatTime(getProductiveHours())} ({((getProductiveHours() / getMonitoringHours()) * 100).toFixed(1)}%)
                     </Typography>
                   </Box>
                   <Box sx={{ 
@@ -1607,7 +1592,7 @@ const Dashboard = () => {
                       ☕ <strong>Idle Time</strong>
                     </Typography>
                     <Typography variant="body2" color="warning.main">
-                      {getIdleHours().toFixed(2)}h ({((getIdleHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                      {formatTime(getIdleHours())} ({((getIdleHours() / getMonitoringHours()) * 100).toFixed(1)}%)
                     </Typography>
                   </Box>
                   <Box sx={{ 
@@ -1633,7 +1618,7 @@ const Dashboard = () => {
                         📞 <strong>Communication Time</strong>
                       </Typography>
                       <Typography variant="body2" color="info.main">
-                        {activityData.system.aggregates.communicationHours.toFixed(2)}h ({((activityData.system.aggregates.communicationHours / getMonitoringHours()) * 100).toFixed(1)}%)
+                        {formatTime(activityData.system.aggregates.communicationHours)} ({((activityData.system.aggregates.communicationHours / getMonitoringHours()) * 100).toFixed(1)}%)
                       </Typography>
                     </Box>
                     <Box sx={{ 
@@ -1647,6 +1632,60 @@ const Dashboard = () => {
                         width: `${(activityData.system.aggregates.communicationHours / getMonitoringHours()) * 100}%`,
                         height: '100%',
                         backgroundColor: '#2196f3',
+                        transition: 'width 0.3s'
+                      }} />
+                    </Box>
+                  </Box>
+                )}
+
+                {getBrowsingHours() > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">
+                        🌐 <strong>Browsing Time</strong>
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#9c27b0' }}>
+                        {formatTime(getBrowsingHours())} ({((getBrowsingHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 12, 
+                      backgroundColor: '#e0e0e0',
+                      borderRadius: 1,
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{ 
+                        width: `${(getBrowsingHours() / getMonitoringHours()) * 100}%`,
+                        height: '100%',
+                        backgroundColor: '#9c27b0',
+                        transition: 'width 0.3s'
+                      }} />
+                    </Box>
+                  </Box>
+                )}
+
+                {getOtherHours() > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">
+                        📋 <strong>Other Activities</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatTime(getOtherHours())} ({((getOtherHours() / getMonitoringHours()) * 100).toFixed(1)}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      width: '100%', 
+                      height: 12, 
+                      backgroundColor: '#e0e0e0',
+                      borderRadius: 1,
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{ 
+                        width: `${(getOtherHours() / getMonitoringHours()) * 100}%`,
+                        height: '100%',
+                        backgroundColor: '#757575',
                         transition: 'width 0.3s'
                       }} />
                     </Box>
@@ -1728,7 +1767,7 @@ const Dashboard = () => {
         fullWidth
       >
         <DialogTitle>
-          Idle Hours - {getIdleHours().toFixed(2)} hours
+          Idle Hours - {formatTime(getIdleHours())}
         </DialogTitle>
         <DialogContent>
           {activityData && activityData.system ? (
@@ -1738,10 +1777,7 @@ const Dashboard = () => {
                   Total Idle Time
                 </Typography>
                 <Typography variant="h3" sx={{ mb: 2, color: '#ff9800' }}>
-                  {getIdleHours().toFixed(2)} hours
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  {(getIdleHours() * 60).toFixed(0)} minutes
+                  {formatTime(getIdleHours())}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Time when no application activity was detected (breaks, idle, away from keyboard)
@@ -2838,6 +2874,9 @@ const Dashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* AI Chatbot */}
+      <Chatbot />
     </Box>
   );
 };

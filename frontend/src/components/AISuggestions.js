@@ -30,9 +30,10 @@ import {
   CheckCircle,
   Refresh,
   AutoAwesome,
+  Memory,
 } from '@mui/icons-material';
 
-const AISuggestions = ({ activityData, focusedWindow }) => {
+const AISuggestions = ({ activityData, focusedWindow, leaveDaysData, coursesData, batteryInfo, memoryUsage, productivityScore }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [expanded, setExpanded] = useState(true);
   const [dismissedSuggestions, setDismissedSuggestions] = useState(new Set());
@@ -44,13 +45,28 @@ const AISuggestions = ({ activityData, focusedWindow }) => {
   const [aiModel, setAiModel] = useState('');
   const isGeneratingRef = useRef(false);
   const isMountedRef = useRef(true);
+  const dataReadyRef = useRef(false);
 
   useEffect(() => {
     // Set mounted flag
     isMountedRef.current = true;
     
-    // Only generate suggestions once when component mounts and we have data
-    if (activityData && !hasLoaded && !isGeneratingRef.current) {
+    // Only generate suggestions once when component mounts and we have complete data
+    // Wait for activity data AND leave/courses data to be available
+    const hasCompleteData = activityData && 
+      (leaveDaysData !== undefined) && 
+      (coursesData !== undefined);
+    
+    // Only generate if we have complete data, haven't loaded yet, and haven't marked data as ready
+    if (hasCompleteData && !hasLoaded && !isGeneratingRef.current && !dataReadyRef.current) {
+      console.log('✅ All data loaded, generating AI suggestions...', {
+        hasActivityData: !!activityData,
+        leaveDaysCount: leaveDaysData?.length,
+        coursesCount: coursesData?.length,
+        hasBattery: !!batteryInfo,
+        memoryUsage: memoryUsage
+      });
+      dataReadyRef.current = true; // Mark that we've detected data is ready
       generateAISuggestions();
     }
     
@@ -59,7 +75,7 @@ const AISuggestions = ({ activityData, focusedWindow }) => {
       isMountedRef.current = false;
       isGeneratingRef.current = false;
     };
-  }, [activityData, hasLoaded]);
+  }, [activityData, leaveDaysData, coursesData, batteryInfo, memoryUsage, hasLoaded]);
 
   const generateAISuggestions = async () => {
     // Prevent duplicate requests
@@ -75,15 +91,129 @@ const AISuggestions = ({ activityData, focusedWindow }) => {
     console.log('🚀 Starting AI suggestions generation...');
     
     try {
-      console.log('📤 Sending request to backend...');
+      // Calculate metrics from activityData
+      const totalActiveMinutes = activityData?.system?.aggregates?.overallMonitoringHours 
+        ? activityData.system.aggregates.overallMonitoringHours * 60 
+        : 120; // default
+      
+      const productiveMinutes = activityData?.system?.aggregates?.productiveHours 
+        ? activityData.system.aggregates.productiveHours * 60 
+        : 0;
+      
+      const communicationMinutes = activityData?.system?.aggregates?.communicationHours 
+        ? activityData.system.aggregates.communicationHours * 60 
+        : 0;
+      
+      const idleMinutes = activityData?.system?.aggregates?.idleHours 
+        ? activityData.system.aggregates.idleHours * 60 
+        : 0;
+      
+      const focusTimePercentage = totalActiveMinutes > 0 
+        ? Math.round((productiveMinutes / totalActiveMinutes) * 100) 
+        : 0;
+      
+      const meetingTimePercentage = totalActiveMinutes > 0 
+        ? Math.round((communicationMinutes / totalActiveMinutes) * 100) 
+        : 0;
+      
+      const breakTimePercentage = totalActiveMinutes > 0 
+        ? Math.round((idleMinutes / totalActiveMinutes) * 100) 
+        : 0;
+      
+      const productivityScore = Math.min(100, Math.round(
+        (focusTimePercentage * 0.6) + (meetingTimePercentage * 0.2) + (breakTimePercentage * 0.2)
+      ));
+      
+      // Create work patterns structure
+      const workPatterns = {
+        metrics: {
+          total_active_time_minutes: totalActiveMinutes,
+          focus_time_percentage: focusTimePercentage,
+          meeting_time_percentage: meetingTimePercentage,
+          break_time_percentage: breakTimePercentage,
+          productivity_score: productivityScore,
+        },
+        work_patterns: [],
+      };
+      
+      const appStats = {
+        unique_applications: activityData?.apps?.filter(a => a.name !== 'background_apps').length || 0,
+      };
+      
+      const currentApps = activityData?.apps?.filter(a => a.name !== 'background_apps').map(a => a.name) || [];
+      
+      // Process leave days data
+      const leaveDays = {
+        totalDays: leaveDaysData?.length || 0,
+        recentLeaves: leaveDaysData?.slice(0, 3).map(l => ({
+          date: l.date,
+          dayOfWeek: l.dayOfWeek,
+          runningHours: l.runningHours
+        })) || []
+      };
+      
+      // Process courses data
+      const courses = {
+        totalCourses: coursesData?.find(c => c.isSummary)?.totalCount || coursesData?.length || 0,
+        completedCourses: coursesData?.find(c => c.isSummary)?.completedCount || coursesData?.filter(c => c.isCompleted).length || 0,
+        recentCourses: coursesData?.filter(c => !c.isSummary).slice(0, 3).map(c => ({
+          title: c.course_title,
+          provider: c.provider,
+          progress: c.progress,
+          isCompleted: c.isCompleted
+        })) || [],
+        daysWithLearning: coursesData?.find(c => c.isSummary)?.daysWithLearning || 0
+      };
+      
+      // Battery information
+      const battery = batteryInfo ? {
+        percent: batteryInfo.percent,
+        isCharging: batteryInfo.isCharging,
+        status: batteryInfo.isCharging ? 'charging' : (batteryInfo.percent < 20 ? 'low' : 'normal')
+      } : null;
+      
+      // Memory usage information
+      const memory = {
+        totalUsageMB: memoryUsage || 0,
+        totalUsageGB: memoryUsage ? (memoryUsage / 1024).toFixed(2) : 0
+      };
+      
+      console.log('📤 Sending request to backend with calculated metrics:', {
+        totalActiveMinutes,
+        focusTimePercentage,
+        meetingTimePercentage,
+        breakTimePercentage,
+        productivityScore,
+        uniqueApps: appStats.unique_applications,
+        leaveDays: leaveDays.totalDays,
+        courses: courses.completedCourses,
+        battery: battery?.status,
+        memoryGB: memory.totalUsageGB
+      });
+      
+      console.log('📦 Full data being sent:', {
+        leaveDays,
+        courses,
+        battery,
+        memory,
+        productivityScore: productivityScore || 0
+      });
+      
       const response = await fetch('/api/ai-suggestions/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          activityData,
+          workPatterns,
+          appStats,
           focusedWindow,
+          currentApps,
+          leaveDays,
+          courses,
+          battery,
+          memory,
+          productivityScore: productivityScore || 0
         }),
       });
 
@@ -163,8 +293,9 @@ const AISuggestions = ({ activityData, focusedWindow }) => {
   };
 
   const handleRefresh = () => {
-    // Reset the loaded flag to allow re-fetching
+    // Reset the loaded flag and data ready flag to allow re-fetching
     setHasLoaded(false);
+    dataReadyRef.current = false;
     generateAISuggestions();
   };
 
@@ -179,6 +310,7 @@ const AISuggestions = ({ activityData, focusedWindow }) => {
       Psychology: <Psychology />,
       TrendingUp: <TrendingUp />,
       Lightbulb: <Lightbulb />,
+      Memory: <Memory />,
     };
     return iconMap[iconName] || <Lightbulb />;
   };

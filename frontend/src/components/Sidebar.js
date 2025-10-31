@@ -42,9 +42,10 @@ const mainMenuItems = [
 
 // Settings menu items
 const settingsMenuItems = [
+  { text: 'AI Configuration', icon: <Settings />, path: '/configuration' },
   { text: 'Application Activity', icon: <Computer />, path: '/application-activity' },
   { text: 'Alert Rules', icon: <NotificationsActive />, path: '/alert-rules' },
-  { text: 'Category Configuration', icon: <Settings />, path: '/category-configuration' },
+  { text: 'Category Configuration', icon: <Extension />, path: '/category-configuration' },
   { text: 'Holiday Management', icon: <Event />, path: '/holiday-management' },
 ];
 

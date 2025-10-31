@@ -14,9 +14,9 @@
         "Microsoft Excel",
         "Microsoft Word",
         "Microsoft PowerPoint",
-        "Google Chrome",
-        "Firefox",
-        "Notepad"
+        "Notepad",
+        "Visual Studio Code",
+        "Onenote"
       ]
     },
     {
@@ -36,6 +36,20 @@
       ]
     },
     {
+      "id": "browsers",
+      "name": "Browsers",
+      "icon": "Apps",
+      "color": "#9c27b0",
+      "applications": [
+        "Google Chrome",
+        "Microsoft Edge",
+        "Firefox",
+        "Opera",
+        "Brave",
+        "Safari"
+      ]
+    },
+    {
       "id": "break",
       "name": "Break",
       "icon": "Coffee",
@@ -51,5 +65,5 @@
       ]
     }
   ],
-  "last_updated": "2025-10-25T11:08:19.830Z"
+  "last_updated": "2025-10-30T17:42:20.995Z"
 }

@@ -61,6 +61,7 @@ import {
   Edit as EditIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import LearningChatbot from '../components/LearningChatbot';
 
 const LearningProgress = () => {
   const [loading, setLoading] = useState(true);
@@ -1265,6 +1266,16 @@ const LearningProgress = () => {
           </Paper>
         </Box>
       )}
+      
+      {/* Learning Chatbot */}
+      <LearningChatbot 
+        learningData={{
+          todayData,
+          allCourses: allCoursesData,
+          stats,
+          goals,
+        }}
+      />
     </Box>
   );
 };

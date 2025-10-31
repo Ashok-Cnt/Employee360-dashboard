@@ -1,0 +1,12 @@
+{
+  "name": "employee360-desktop-widget",
+  "version": "1.0.0",
+  "main": "main.js",
+  "description": "Always-on-top animated desktop widget for Employee360 dashboard",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^29.0.0"
+  }
+}
